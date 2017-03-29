@@ -1,0 +1,271 @@
+nohup: ignoring input
+I tensorflow/stream_executor/dso_loader.cc:128] successfully opened CUDA library libcublas.so locally
+I tensorflow/stream_executor/dso_loader.cc:128] successfully opened CUDA library libcudnn.so locally
+I tensorflow/stream_executor/dso_loader.cc:128] successfully opened CUDA library libcufft.so locally
+I tensorflow/stream_executor/dso_loader.cc:128] successfully opened CUDA library libcuda.so.1 locally
+I tensorflow/stream_executor/dso_loader.cc:128] successfully opened CUDA library libcurand.so locally
+Parsing json file worm_tss.json
+Custom model params:  {}
+Performing k-folds model validation...
+k= 3
+Test fraction =  0.3
+K-folds training set size: 4458
+K-folds testing set size: 1911
+
+
+
+
+Starting on k-fold number 0
+Opening HDF5 data file: worm_tss.h5
+Opening HDF5 data file: worm_tss.h5
+Custom model params:  {}
+Running inferenceA
+Conv input dna_conv1 shape: [None, 1, 600, 4]
+Conv filter dna_conv1 shape: [1, 24, 4, 48]
+Conv output shape [None, 1, 577, 48] 
+
+Relu layer  input shape: [None, 1, 577, 48]
+Relu layer  output shape [None, 1, 577, 48] 
+
+AvgPool dna_avg_pool1 input shape [None, 1, 577, 48]
+AvgPool dna_avg_pool1 output shape [None, 1, 145, 48]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 1.0, 'right -', 2.0)
+
+
+Conv input dna_conv2 shape: [None, 1, 145, 48]
+Conv filter dna_conv2 shape: [1, 24, 48, 48]
+Conv output shape [None, 1, 122, 48] 
+
+Relu layer  input shape: [None, 1, 122, 48]
+Relu layer  output shape [None, 1, 122, 48] 
+
+AvgPool dna_avg_pool2 input shape [None, 1, 122, 48]
+AvgPool dna_avg_pool2 output shape [None, 1, 31, 48]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 1.0, 'right -', 1.0)
+
+
+Input shape of flatten layer  is [-1, 1, 31, 48]
+Output shape of flatten layer is  is [None, 1488]
+Linear layer linear1 input shape: [None, 1488]
+Linear layer linear1 output len 100 
+
+Relu layer  input shape: [None, 100]
+Relu layer  output shape [None, 100] 
+
+Linear layer linear2 input shape: [None, 100]
+Linear layer linear2 output len 50 
+
+Relu layer  input shape: [None, 50]
+Relu layer  output shape [None, 50] 
+
+Linear layer linear3 input shape: [None, 50]
+Linear layer linear3 output len 2 
+
+First layer detected dna_conv1
+I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:937] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
+I tensorflow/core/common_runtime/gpu/gpu_device.cc:885] Found device 0 with properties: 
+name: GeForce GTX 970
+major: 5 minor: 2 memoryClockRate (GHz) 1.342
+pciBusID 0000:01:00.0
+Total memory: 3.94GiB
+Free memory: 3.53GiB
+I tensorflow/core/common_runtime/gpu/gpu_device.cc:906] DMA: 0 
+I tensorflow/core/common_runtime/gpu/gpu_device.cc:916] 0:   Y 
+I tensorflow/core/common_runtime/gpu/gpu_device.cc:975] Creating TensorFlow device (/gpu:0) -> (device: 0, name: GeForce GTX 970, pci bus id: 0000:01:00.0)
+No checkpoint found on worm_tss1_valid/checkpoint_k0
+Running training mode...
+Step 0: loss = 110.8539 (4.120 sec)
+Step 1000: loss = 10.3736 (0.025 sec)
+Step 2000: loss = 5.4111 (0.025 sec)
+Step 3000: loss = 6.3571 (0.023 sec)
+Step 4000: loss = 6.0232 (0.025 sec)
+Step 5000: loss = 0.1274 (0.021 sec)
+Step 6000: loss = 0.2856 (0.025 sec)
+Step 7000: loss = 0.1250 (0.021 sec)
+Step 8000: loss = 0.0529 (0.022 sec)
+Step 9000: loss = 0.0322 (0.026 sec)
+Saving on  worm_tss1_valid/checkpoint_k0
+Training data eval:
+Finished evaluating an epoch
+  Num examples: 4458  Num correct: 4458  Precision @ 1: 1.0000
+Testing data eval:
+Finished evaluating an epoch
+  Num examples: 1911  Num correct: 1783  Precision @ 1: 0.9330
+Step 10000: loss = 0.0297 (0.029 sec)
+Step 11000: loss = 0.0056 (0.026 sec)
+Step 12000: loss = 0.0374 (0.025 sec)
+Step 13000: loss = 0.0157 (0.024 sec)
+Saving on  worm_tss1_valid/checkpoint_k0
+Training data eval:
+Finished evaluating an epoch
+  Num examples: 4458  Num correct: 4458  Precision @ 1: 1.0000
+Testing data eval:
+Finished evaluating an epoch
+  Num examples: 1911  Num correct: 1787  Precision @ 1: 0.9351
+Time of completion for k= 0 : 2017-01-05 22:25:12.460016
+
+
+
+
+Starting on k-fold number 1
+Opening HDF5 data file: worm_tss.h5
+Opening HDF5 data file: worm_tss.h5
+Custom model params:  {}
+Running inferenceA
+Conv input dna_conv1 shape: [None, 1, 600, 4]
+Conv filter dna_conv1 shape: [1, 24, 4, 48]
+Conv output shape [None, 1, 577, 48] 
+
+Relu layer  input shape: [None, 1, 577, 48]
+Relu layer  output shape [None, 1, 577, 48] 
+
+AvgPool dna_avg_pool1 input shape [None, 1, 577, 48]
+AvgPool dna_avg_pool1 output shape [None, 1, 145, 48]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 1.0, 'right -', 2.0)
+
+
+Conv input dna_conv2 shape: [None, 1, 145, 48]
+Conv filter dna_conv2 shape: [1, 24, 48, 48]
+Conv output shape [None, 1, 122, 48] 
+
+Relu layer  input shape: [None, 1, 122, 48]
+Relu layer  output shape [None, 1, 122, 48] 
+
+AvgPool dna_avg_pool2 input shape [None, 1, 122, 48]
+AvgPool dna_avg_pool2 output shape [None, 1, 31, 48]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 1.0, 'right -', 1.0)
+
+
+Input shape of flatten layer  is [-1, 1, 31, 48]
+Output shape of flatten layer is  is [None, 1488]
+Linear layer linear1 input shape: [None, 1488]
+Linear layer linear1 output len 100 
+
+Relu layer  input shape: [None, 100]
+Relu layer  output shape [None, 100] 
+
+Linear layer linear2 input shape: [None, 100]
+Linear layer linear2 output len 50 
+
+Relu layer  input shape: [None, 50]
+Relu layer  output shape [None, 50] 
+
+Linear layer linear3 input shape: [None, 50]
+Linear layer linear3 output len 2 
+
+First layer detected dna_conv1
+I tensorflow/core/common_runtime/gpu/gpu_device.cc:975] Creating TensorFlow device (/gpu:0) -> (device: 0, name: GeForce GTX 970, pci bus id: 0000:01:00.0)
+No checkpoint found on worm_tss1_valid/checkpoint_k1
+Running training mode...
+Step 0: loss = 62.9298 (0.082 sec)
+Step 1000: loss = 11.5659 (0.022 sec)
+Step 2000: loss = 5.3611 (0.021 sec)
+Step 3000: loss = 6.7624 (0.022 sec)
+Step 4000: loss = 1.1379 (0.022 sec)
+Step 5000: loss = 1.1088 (0.022 sec)
+Step 6000: loss = 0.4406 (0.025 sec)
+Step 7000: loss = 0.1346 (0.023 sec)
+Step 8000: loss = 0.0397 (0.023 sec)
+Step 9000: loss = 0.0238 (0.025 sec)
+Saving on  worm_tss1_valid/checkpoint_k1
+Training data eval:
+Finished evaluating an epoch
+  Num examples: 4458  Num correct: 4458  Precision @ 1: 1.0000
+Testing data eval:
+Finished evaluating an epoch
+  Num examples: 1911  Num correct: 1803  Precision @ 1: 0.9435
+Step 10000: loss = 0.0150 (0.024 sec)
+Step 11000: loss = 0.0069 (0.025 sec)
+Step 12000: loss = 0.0019 (0.025 sec)
+Step 13000: loss = 0.0012 (0.024 sec)
+Saving on  worm_tss1_valid/checkpoint_k1
+Training data eval:
+Finished evaluating an epoch
+  Num examples: 4458  Num correct: 4458  Precision @ 1: 1.0000
+Testing data eval:
+Finished evaluating an epoch
+  Num examples: 1911  Num correct: 1803  Precision @ 1: 0.9435
+Time of completion for k= 1 : 2017-01-05 22:31:11.960423
+
+
+
+
+Starting on k-fold number 2
+Opening HDF5 data file: worm_tss.h5
+Opening HDF5 data file: worm_tss.h5
+Custom model params:  {}
+Running inferenceA
+Conv input dna_conv1 shape: [None, 1, 600, 4]
+Conv filter dna_conv1 shape: [1, 24, 4, 48]
+Conv output shape [None, 1, 577, 48] 
+
+Relu layer  input shape: [None, 1, 577, 48]
+Relu layer  output shape [None, 1, 577, 48] 
+
+AvgPool dna_avg_pool1 input shape [None, 1, 577, 48]
+AvgPool dna_avg_pool1 output shape [None, 1, 145, 48]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 1.0, 'right -', 2.0)
+
+
+Conv input dna_conv2 shape: [None, 1, 145, 48]
+Conv filter dna_conv2 shape: [1, 24, 48, 48]
+Conv output shape [None, 1, 122, 48] 
+
+Relu layer  input shape: [None, 1, 122, 48]
+Relu layer  output shape [None, 1, 122, 48] 
+
+AvgPool dna_avg_pool2 input shape [None, 1, 122, 48]
+AvgPool dna_avg_pool2 output shape [None, 1, 31, 48]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 1.0, 'right -', 1.0)
+
+
+Input shape of flatten layer  is [-1, 1, 31, 48]
+Output shape of flatten layer is  is [None, 1488]
+Linear layer linear1 input shape: [None, 1488]
+Linear layer linear1 output len 100 
+
+Relu layer  input shape: [None, 100]
+Relu layer  output shape [None, 100] 
+
+Linear layer linear2 input shape: [None, 100]
+Linear layer linear2 output len 50 
+
+Relu layer  input shape: [None, 50]
+Relu layer  output shape [None, 50] 
+
+Linear layer linear3 input shape: [None, 50]
+Linear layer linear3 output len 2 
+
+First layer detected dna_conv1
+I tensorflow/core/common_runtime/gpu/gpu_device.cc:975] Creating TensorFlow device (/gpu:0) -> (device: 0, name: GeForce GTX 970, pci bus id: 0000:01:00.0)
+No checkpoint found on worm_tss1_valid/checkpoint_k2
+Running training mode...
+Step 0: loss = 36.5212 (0.083 sec)
+Step 1000: loss = 13.3688 (0.026 sec)
+Step 2000: loss = 3.1983 (0.024 sec)
+Step 3000: loss = 3.9194 (0.024 sec)
+Step 4000: loss = 0.8472 (0.028 sec)
+Step 5000: loss = 0.4444 (0.027 sec)
+Step 6000: loss = 0.0558 (0.025 sec)
+Step 7000: loss = 0.1051 (0.025 sec)
+Step 8000: loss = 0.0509 (0.022 sec)
+Step 9000: loss = 0.0088 (0.022 sec)
+Saving on  worm_tss1_valid/checkpoint_k2
+Training data eval:
+Finished evaluating an epoch
+  Num examples: 4458  Num correct: 4458  Precision @ 1: 1.0000
+Testing data eval:
+Finished evaluating an epoch
+  Num examples: 1911  Num correct: 1804  Precision @ 1: 0.9440
+Step 10000: loss = 0.0036 (0.025 sec)
+Step 11000: loss = 0.0035 (0.024 sec)
+Step 12000: loss = 0.0033 (0.026 sec)
+Step 13000: loss = 0.0010 (0.025 sec)
+Saving on  worm_tss1_valid/checkpoint_k2
+Training data eval:
+Finished evaluating an epoch
+  Num examples: 4458  Num correct: 4458  Precision @ 1: 1.0000
+Testing data eval:
+Finished evaluating an epoch
+  Num examples: 1911  Num correct: 1802  Precision @ 1: 0.9430
+Time of completion for k= 2 : 2017-01-05 22:37:16.044024

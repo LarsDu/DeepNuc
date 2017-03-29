@@ -1,0 +1,655 @@
+
+
+tf7
+
+Opening HDF5 data file: example_data/worm_tss_nib.h5
+(1698,)
+(6794,)
+Running inferenceB - strided convolutions with wide filters
+Conv2d input dna_conv1 shape: [None, 1, 600, 4]
+Conv2d filter dna_conv1 shape: [1, 96, 4, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 600, 192] 
+
+Relu layer  input shape: [None, 1, 600, 192]
+Relu layer  output shape [None, 1, 600, 192] 
+
+AvgPool dna_avg_pool1 input shape [None, 1, 600, 192]
+AvgPool dna_avg_pool1 output shape [None, 1, 150, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 0.0, 'right -', 0.0)
+
+
+Conv2d input dna_conv2 shape: [None, 1, 150, 192]
+Conv2d filter dna_conv2 shape: [1, 96, 192, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 150, 192] 
+
+Relu layer  input shape: [None, 1, 150, 192]
+Relu layer  output shape [None, 1, 150, 192] 
+
+AvgPool dna_avg_pool2 input shape [None, 1, 150, 192]
+AvgPool dna_avg_pool2 output shape [None, 1, 38, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 1.0, 'right -', 1.0)
+
+
+Input shape of flatten layer  is [-1, 1, 38, 192]
+Output shape of flatten layer is  is [None, 7296] 
+
+Linear layer linear1 input shape: [None, 7296]
+Linear layer linear1 output len 100 
+
+Relu layer  input shape: [None, 100]
+Relu layer  output shape [None, 100] 
+
+Linear layer linear2 input shape: [None, 100]
+Linear layer linear2 output len 50 
+
+Relu layer  input shape: [None, 50]
+Relu layer  output shape [None, 50] 
+
+Linear layer linear3 input shape: [None, 50]
+Linear layer linear3 output len 2 
+
+First layer detected dna_conv1
+(' Retrieving checkpoints from', 'example_data/example_train//checkpoints')
+('Failed to load checkpoint', 'example_data/example_train//checkpoints')
+Epoch 1 Step 283 loss = 0.6095 (23.796 sec)
+Epoch 2 Step 566 loss = 0.3434 (47.173 sec)
+Epoch 3 Step 849 loss = 0.3726 (70.680 sec)
+Epoch 4 Step 1132 loss = 0.1699 (94.214 sec)
+Epoch 5 Step 1415 loss = 0.1013 (117.775 sec)
+Saving checkpoints
+Num examples: 6794  Num correct: 5642  Accuracy: 0.8304
+
+Num examples: 1698  Num correct: 1352  Accuracy: 0.7962
+
+Epoch 6 Step 1698 loss = 0.1951 (156.354 sec)
+Epoch 7 Step 1981 loss = 0.1419 (179.683 sec)
+Epoch 8 Step 2264 loss = 0.1788 (202.851 sec)
+Epoch 9 Step 2547 loss = 0.1030 (225.958 sec)
+Saving final checkpoint
+Training data eval:
+Num examples: 6794  Num correct: 6592  Accuracy: 0.9703
+
+Saving auROC image to example_data/example_train//metrics.png
+Testing data eval:
+Num examples: 1698  Num correct: 1539  Accuracy: 0.9064
+
+Saving auROC image to example_data/example_train//metrics.png
+
+
+tf7
+
+Opening HDF5 data file: example_data/worm_tss_nib.h5
+(1698,)
+(6794,)
+Running inferenceB - strided convolutions with wide filters
+Conv2d input dna_conv1 shape: [None, 1, 600, 4]
+Conv2d filter dna_conv1 shape: [1, 96, 4, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 600, 192] 
+
+Relu layer  input shape: [None, 1, 600, 192]
+Relu layer  output shape [None, 1, 600, 192] 
+
+AvgPool dna_avg_pool1 input shape [None, 1, 600, 192]
+AvgPool dna_avg_pool1 output shape [None, 1, 150, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 0.0, 'right -', 0.0)
+
+
+Conv2d input dna_conv2 shape: [None, 1, 150, 192]
+Conv2d filter dna_conv2 shape: [1, 96, 192, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 150, 192] 
+
+Relu layer  input shape: [None, 1, 150, 192]
+Relu layer  output shape [None, 1, 150, 192] 
+
+AvgPool dna_avg_pool2 input shape [None, 1, 150, 192]
+AvgPool dna_avg_pool2 output shape [None, 1, 38, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 1.0, 'right -', 1.0)
+
+
+Input shape of flatten layer  is [-1, 1, 38, 192]
+Output shape of flatten layer is  is [None, 7296] 
+
+Linear layer linear1 input shape: [None, 7296]
+Linear layer linear1 output len 100 
+
+Relu layer  input shape: [None, 100]
+Relu layer  output shape [None, 100] 
+
+Linear layer linear2 input shape: [None, 100]
+Linear layer linear2 output len 50 
+
+Relu layer  input shape: [None, 50]
+Relu layer  output shape [None, 50] 
+
+Linear layer linear3 input shape: [None, 50]
+Linear layer linear3 output len 2 
+
+First layer detected dna_conv1
+
+
+tf7
+
+Opening HDF5 data file: example_data/worm_tss_nib.h5
+(1698,)
+(6794,)
+Running inferenceB - strided convolutions with wide filters
+Conv2d input dna_conv1 shape: [None, 1, 600, 4]
+Conv2d filter dna_conv1 shape: [1, 96, 4, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 600, 192] 
+
+Relu layer  input shape: [None, 1, 600, 192]
+Relu layer  output shape [None, 1, 600, 192] 
+
+AvgPool dna_avg_pool1 input shape [None, 1, 600, 192]
+AvgPool dna_avg_pool1 output shape [None, 1, 150, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 0.0, 'right -', 0.0)
+
+
+Conv2d input dna_conv2 shape: [None, 1, 150, 192]
+Conv2d filter dna_conv2 shape: [1, 96, 192, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 150, 192] 
+
+Relu layer  input shape: [None, 1, 150, 192]
+Relu layer  output shape [None, 1, 150, 192] 
+
+AvgPool dna_avg_pool2 input shape [None, 1, 150, 192]
+AvgPool dna_avg_pool2 output shape [None, 1, 38, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 1.0, 'right -', 1.0)
+
+
+Input shape of flatten layer  is [-1, 1, 38, 192]
+Output shape of flatten layer is  is [None, 7296] 
+
+Linear layer linear1 input shape: [None, 7296]
+Linear layer linear1 output len 100 
+
+Relu layer  input shape: [None, 100]
+Relu layer  output shape [None, 100] 
+
+Linear layer linear2 input shape: [None, 100]
+Linear layer linear2 output len 50 
+
+Relu layer  input shape: [None, 50]
+Relu layer  output shape [None, 50] 
+
+Linear layer linear3 input shape: [None, 50]
+Linear layer linear3 output len 2 
+
+First layer detected dna_conv1
+
+
+tf7
+
+Opening HDF5 data file: example_data/worm_tss_nib.h5
+(1698,)
+(6794,)
+Running inferenceB - strided convolutions with wide filters
+Conv2d input dna_conv1 shape: [None, 1, 600, 4]
+Conv2d filter dna_conv1 shape: [1, 96, 4, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 600, 192] 
+
+Relu layer  input shape: [None, 1, 600, 192]
+Relu layer  output shape [None, 1, 600, 192] 
+
+AvgPool dna_avg_pool1 input shape [None, 1, 600, 192]
+AvgPool dna_avg_pool1 output shape [None, 1, 150, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 0.0, 'right -', 0.0)
+
+
+Conv2d input dna_conv2 shape: [None, 1, 150, 192]
+Conv2d filter dna_conv2 shape: [1, 96, 192, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 150, 192] 
+
+Relu layer  input shape: [None, 1, 150, 192]
+Relu layer  output shape [None, 1, 150, 192] 
+
+AvgPool dna_avg_pool2 input shape [None, 1, 150, 192]
+AvgPool dna_avg_pool2 output shape [None, 1, 38, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 1.0, 'right -', 1.0)
+
+
+Input shape of flatten layer  is [-1, 1, 38, 192]
+Output shape of flatten layer is  is [None, 7296] 
+
+Linear layer linear1 input shape: [None, 7296]
+Linear layer linear1 output len 100 
+
+Relu layer  input shape: [None, 100]
+Relu layer  output shape [None, 100] 
+
+Linear layer linear2 input shape: [None, 100]
+Linear layer linear2 output len 50 
+
+Relu layer  input shape: [None, 50]
+Relu layer  output shape [None, 50] 
+
+Linear layer linear3 input shape: [None, 50]
+Linear layer linear3 output len 2 
+
+First layer detected dna_conv1
+
+
+tf7
+
+Opening HDF5 data file: example_data/worm_tss_nib.h5
+(1698,)
+(6794,)
+Running inferenceB - strided convolutions with wide filters
+Conv2d input dna_conv1 shape: [None, 1, 600, 4]
+Conv2d filter dna_conv1 shape: [1, 96, 4, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 600, 192] 
+
+Relu layer  input shape: [None, 1, 600, 192]
+Relu layer  output shape [None, 1, 600, 192] 
+
+AvgPool dna_avg_pool1 input shape [None, 1, 600, 192]
+AvgPool dna_avg_pool1 output shape [None, 1, 150, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 0.0, 'right -', 0.0)
+
+
+Conv2d input dna_conv2 shape: [None, 1, 150, 192]
+Conv2d filter dna_conv2 shape: [1, 96, 192, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 150, 192] 
+
+Relu layer  input shape: [None, 1, 150, 192]
+Relu layer  output shape [None, 1, 150, 192] 
+
+AvgPool dna_avg_pool2 input shape [None, 1, 150, 192]
+AvgPool dna_avg_pool2 output shape [None, 1, 38, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 1.0, 'right -', 1.0)
+
+
+Input shape of flatten layer  is [-1, 1, 38, 192]
+Output shape of flatten layer is  is [None, 7296] 
+
+Linear layer linear1 input shape: [None, 7296]
+Linear layer linear1 output len 100 
+
+Relu layer  input shape: [None, 100]
+Relu layer  output shape [None, 100] 
+
+Linear layer linear2 input shape: [None, 100]
+Linear layer linear2 output len 50 
+
+Relu layer  input shape: [None, 50]
+Relu layer  output shape [None, 50] 
+
+Linear layer linear3 input shape: [None, 50]
+Linear layer linear3 output len 2 
+
+First layer detected dna_conv1
+
+
+tf7
+
+Opening HDF5 data file: example_data/worm_tss_nib.h5
+(1698,)
+(6794,)
+Running inferenceB - strided convolutions with wide filters
+Conv2d input dna_conv1 shape: [None, 1, 600, 4]
+Conv2d filter dna_conv1 shape: [1, 96, 4, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 600, 192] 
+
+Relu layer  input shape: [None, 1, 600, 192]
+Relu layer  output shape [None, 1, 600, 192] 
+
+AvgPool dna_avg_pool1 input shape [None, 1, 600, 192]
+AvgPool dna_avg_pool1 output shape [None, 1, 150, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 0.0, 'right -', 0.0)
+
+
+Conv2d input dna_conv2 shape: [None, 1, 150, 192]
+Conv2d filter dna_conv2 shape: [1, 96, 192, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 150, 192] 
+
+Relu layer  input shape: [None, 1, 150, 192]
+Relu layer  output shape [None, 1, 150, 192] 
+
+AvgPool dna_avg_pool2 input shape [None, 1, 150, 192]
+AvgPool dna_avg_pool2 output shape [None, 1, 38, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 1.0, 'right -', 1.0)
+
+
+Input shape of flatten layer  is [-1, 1, 38, 192]
+Output shape of flatten layer is  is [None, 7296] 
+
+Linear layer linear1 input shape: [None, 7296]
+Linear layer linear1 output len 100 
+
+Relu layer  input shape: [None, 100]
+Relu layer  output shape [None, 100] 
+
+Linear layer linear2 input shape: [None, 100]
+Linear layer linear2 output len 50 
+
+Relu layer  input shape: [None, 50]
+Relu layer  output shape [None, 50] 
+
+Linear layer linear3 input shape: [None, 50]
+Linear layer linear3 output len 2 
+
+First layer detected dna_conv1
+
+
+tf7
+
+Opening HDF5 data file: example_data/worm_tss_nib.h5
+(1698,)
+(6794,)
+Running inferenceB - strided convolutions with wide filters
+Conv2d input dna_conv1 shape: [None, 1, 600, 4]
+Conv2d filter dna_conv1 shape: [1, 96, 4, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 600, 192] 
+
+Relu layer  input shape: [None, 1, 600, 192]
+Relu layer  output shape [None, 1, 600, 192] 
+
+AvgPool dna_avg_pool1 input shape [None, 1, 600, 192]
+AvgPool dna_avg_pool1 output shape [None, 1, 150, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 0.0, 'right -', 0.0)
+
+
+Conv2d input dna_conv2 shape: [None, 1, 150, 192]
+Conv2d filter dna_conv2 shape: [1, 96, 192, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 150, 192] 
+
+Relu layer  input shape: [None, 1, 150, 192]
+Relu layer  output shape [None, 1, 150, 192] 
+
+AvgPool dna_avg_pool2 input shape [None, 1, 150, 192]
+AvgPool dna_avg_pool2 output shape [None, 1, 38, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 1.0, 'right -', 1.0)
+
+
+Input shape of flatten layer  is [-1, 1, 38, 192]
+Output shape of flatten layer is  is [None, 7296] 
+
+Linear layer linear1 input shape: [None, 7296]
+Linear layer linear1 output len 100 
+
+Relu layer  input shape: [None, 100]
+Relu layer  output shape [None, 100] 
+
+Linear layer linear2 input shape: [None, 100]
+Linear layer linear2 output len 50 
+
+Relu layer  input shape: [None, 50]
+Relu layer  output shape [None, 50] 
+
+Linear layer linear3 input shape: [None, 50]
+Linear layer linear3 output len 2 
+
+First layer detected dna_conv1
+(' Retrieving checkpoints from', 'example_data/example_train/checkpoints')
+('Successfully loaded checkpoint from', 'example_data/example_train/checkpoints')
+Successfully loaded from checkpoint example_data/example_train/checkpoints
+
+
+tf7
+
+Opening HDF5 data file: example_data/worm_tss_nib.h5
+(1698,)
+(6794,)
+Running inferenceB - strided convolutions with wide filters
+Conv2d input dna_conv1 shape: [None, 1, 600, 4]
+Conv2d filter dna_conv1 shape: [1, 96, 4, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 600, 192] 
+
+Relu layer  input shape: [None, 1, 600, 192]
+Relu layer  output shape [None, 1, 600, 192] 
+
+AvgPool dna_avg_pool1 input shape [None, 1, 600, 192]
+AvgPool dna_avg_pool1 output shape [None, 1, 150, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 0.0, 'right -', 0.0)
+
+
+Conv2d input dna_conv2 shape: [None, 1, 150, 192]
+Conv2d filter dna_conv2 shape: [1, 96, 192, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 150, 192] 
+
+Relu layer  input shape: [None, 1, 150, 192]
+Relu layer  output shape [None, 1, 150, 192] 
+
+AvgPool dna_avg_pool2 input shape [None, 1, 150, 192]
+AvgPool dna_avg_pool2 output shape [None, 1, 38, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 1.0, 'right -', 1.0)
+
+
+Input shape of flatten layer  is [-1, 1, 38, 192]
+Output shape of flatten layer is  is [None, 7296] 
+
+Linear layer linear1 input shape: [None, 7296]
+Linear layer linear1 output len 100 
+
+Relu layer  input shape: [None, 100]
+Relu layer  output shape [None, 100] 
+
+Linear layer linear2 input shape: [None, 100]
+Linear layer linear2 output len 50 
+
+Relu layer  input shape: [None, 50]
+Relu layer  output shape [None, 50] 
+
+Linear layer linear3 input shape: [None, 50]
+Linear layer linear3 output len 2 
+
+First layer detected dna_conv1
+(' Retrieving checkpoints from', 'example_data/example_train/checkpoints')
+('Successfully loaded checkpoint from', 'example_data/example_train/checkpoints')
+Successfully loaded from checkpoint example_data/example_train/checkpoints
+
+
+tf7
+
+Opening HDF5 data file: example_data/worm_tss_nib.h5
+(1698,)
+(6794,)
+Running inferenceB - strided convolutions with wide filters
+Conv2d input dna_conv1 shape: [None, 1, 600, 4]
+Conv2d filter dna_conv1 shape: [1, 96, 4, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 600, 192] 
+
+Relu layer  input shape: [None, 1, 600, 192]
+Relu layer  output shape [None, 1, 600, 192] 
+
+AvgPool dna_avg_pool1 input shape [None, 1, 600, 192]
+AvgPool dna_avg_pool1 output shape [None, 1, 150, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 0.0, 'right -', 0.0)
+
+
+Conv2d input dna_conv2 shape: [None, 1, 150, 192]
+Conv2d filter dna_conv2 shape: [1, 96, 192, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 150, 192] 
+
+Relu layer  input shape: [None, 1, 150, 192]
+Relu layer  output shape [None, 1, 150, 192] 
+
+AvgPool dna_avg_pool2 input shape [None, 1, 150, 192]
+AvgPool dna_avg_pool2 output shape [None, 1, 38, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 1.0, 'right -', 1.0)
+
+
+Input shape of flatten layer  is [-1, 1, 38, 192]
+Output shape of flatten layer is  is [None, 7296] 
+
+Linear layer linear1 input shape: [None, 7296]
+Linear layer linear1 output len 100 
+
+Relu layer  input shape: [None, 100]
+Relu layer  output shape [None, 100] 
+
+Linear layer linear2 input shape: [None, 100]
+Linear layer linear2 output len 50 
+
+Relu layer  input shape: [None, 50]
+Relu layer  output shape [None, 50] 
+
+Linear layer linear3 input shape: [None, 50]
+Linear layer linear3 output len 2 
+
+First layer detected dna_conv1
+(' Retrieving checkpoints from', 'example_data/example_train/checkpoints')
+('Successfully loaded checkpoint from', 'example_data/example_train/checkpoints')
+Successfully loaded from checkpoint example_data/example_train/checkpoints
+
+
+tf7
+
+Opening HDF5 data file: example_data/worm_tss_nib.h5
+(1698,)
+(6794,)
+Running inferenceB - strided convolutions with wide filters
+Conv2d input dna_conv1 shape: [None, 1, 600, 4]
+Conv2d filter dna_conv1 shape: [1, 96, 4, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 600, 192] 
+
+Relu layer  input shape: [None, 1, 600, 192]
+Relu layer  output shape [None, 1, 600, 192] 
+
+AvgPool dna_avg_pool1 input shape [None, 1, 600, 192]
+AvgPool dna_avg_pool1 output shape [None, 1, 150, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 0.0, 'right -', 0.0)
+
+
+Conv2d input dna_conv2 shape: [None, 1, 150, 192]
+Conv2d filter dna_conv2 shape: [1, 96, 192, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 150, 192] 
+
+Relu layer  input shape: [None, 1, 150, 192]
+Relu layer  output shape [None, 1, 150, 192] 
+
+AvgPool dna_avg_pool2 input shape [None, 1, 150, 192]
+AvgPool dna_avg_pool2 output shape [None, 1, 38, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 1.0, 'right -', 1.0)
+
+
+Input shape of flatten layer  is [-1, 1, 38, 192]
+Output shape of flatten layer is  is [None, 7296] 
+
+Linear layer linear1 input shape: [None, 7296]
+Linear layer linear1 output len 100 
+
+Relu layer  input shape: [None, 100]
+Relu layer  output shape [None, 100] 
+
+Linear layer linear2 input shape: [None, 100]
+Linear layer linear2 output len 50 
+
+Relu layer  input shape: [None, 50]
+Relu layer  output shape [None, 50] 
+
+Linear layer linear3 input shape: [None, 50]
+Linear layer linear3 output len 2 
+
+First layer detected dna_conv1
+(' Retrieving checkpoints from', 'example_data/example_train/checkpoints')
+('Successfully loaded checkpoint from', 'example_data/example_train/checkpoints')
+Successfully loaded from checkpoint example_data/example_train/checkpoints
+[[ 0.9116  0.0856]]
+('Guess:', 0)
+('Actual:', 0)
+r_rel max 0.00473121
+r_rel min 0.00165116
+
+
+tf7
+
+Opening HDF5 data file: example_data/worm_tss_nib.h5
+(1698,)
+(6794,)
+Running inferenceB - strided convolutions with wide filters
+Conv2d input dna_conv1 shape: [None, 1, 600, 4]
+Conv2d filter dna_conv1 shape: [1, 96, 4, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 600, 192] 
+
+Relu layer  input shape: [None, 1, 600, 192]
+Relu layer  output shape [None, 1, 600, 192] 
+
+AvgPool dna_avg_pool1 input shape [None, 1, 600, 192]
+AvgPool dna_avg_pool1 output shape [None, 1, 150, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 0.0, 'right -', 0.0)
+
+
+Conv2d input dna_conv2 shape: [None, 1, 150, 192]
+Conv2d filter dna_conv2 shape: [1, 96, 192, 192]
+Conv2d padding mode SAME 
+
+Conv2d output shape [None, 1, 150, 192] 
+
+Relu layer  input shape: [None, 1, 150, 192]
+Relu layer  output shape [None, 1, 150, 192] 
+
+AvgPool dna_avg_pool2 input shape [None, 1, 150, 192]
+AvgPool dna_avg_pool2 output shape [None, 1, 38, 192]
+("'SAME' padding: top -", 0.0, 'bottom -', 0.0, 'left -', 1.0, 'right -', 1.0)
+
+
+Input shape of flatten layer  is [-1, 1, 38, 192]
+Output shape of flatten layer is  is [None, 7296] 
+
+Linear layer linear1 input shape: [None, 7296]
+Linear layer linear1 output len 100 
+
+Relu layer  input shape: [None, 100]
+Relu layer  output shape [None, 100] 
+
+Linear layer linear2 input shape: [None, 100]
+Linear layer linear2 output len 50 
+
+Relu layer  input shape: [None, 50]
+Relu layer  output shape [None, 50] 
+
+Linear layer linear3 input shape: [None, 50]
+Linear layer linear3 output len 2 
+
+First layer detected dna_conv1
+(' Retrieving checkpoints from', 'example_data/example_train/checkpoints')
+('Successfully loaded checkpoint from', 'example_data/example_train/checkpoints')
+Successfully loaded from checkpoint example_data/example_train/checkpoints
+[[ 0.9116  0.0856]]
+('Guess:', 0)
+('Actual:', 0)
+r_rel max 0.00473121
+r_rel min 0.00165116

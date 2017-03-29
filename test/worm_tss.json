@@ -1,0 +1,21 @@
+{
+    "files":{
+	"training_file":"worm_tss.h5",
+	"eval_file":"worm_tss.h5"
+    },
+    
+    "options":{
+	"save_dir":"worm_tss1_valid"
+    },
+
+    "training_params":{
+	"num_iterations":14000,
+	"batch_size":50,
+	"learning_rate":1e-4,
+	"seq_len":600,
+	"k_folds":3,
+	"k_validation_test_frac":0.3,
+	"custom_model_params":""
+    }
+
+}

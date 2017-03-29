@@ -1,0 +1,39 @@
+"""
+Testing methods for converting
+nucleotide >> tribit >> 12 bits coding for each 4 nucs >> numpy array
+"""
+
+import numpy as np
+from bitstring import BitArray
+
+
+nib_dict = { 'T':'000',
+                'C':'001',
+                'A':'010',
+                'G':'011',
+                'N':'100'}
+
+nib_dict_rev = {0:'T',1:'C',2:'A',3:'G',4:'N'}
+
+
+
+def main():
+    seq = "ATGACGATACGACGTACG"
+    print seq
+    
+    bin_val =  nuc_to_tribit(seq)
+    print bin_val
+    '''
+    rest_seq = tribit_to_nuc(bin_val)
+    print rest_seq
+    np_seq = nuc_to_tribit_numpy(seq)
+    print np_seq
+    print np_seq[0]
+
+    np_decode = tribit_numpy_to_nucs(np_seq)
+    print "Decoded numpy",np_decode
+    '''
+
+
+if __name__ == "__main__":
+    main()

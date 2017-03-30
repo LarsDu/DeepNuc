@@ -25,7 +25,7 @@ class CrossValidator:
 
         :param nuc_data: An object derived from BaseNucData
         :param save_dir: Save k models under this directory
-        :param params: A JsonParams object. Needed for passing params to NucClassifier
+        :param params: A ModelParams object. Needed for passing params to NucClassifier
         :param nn_method: A dtlayers.py constructed neural network (examples in nucconvmodel.py)
         :param k_folds: Number of k-folds 
         :param test_frac: Fraction of nuc_data to be used for cross validation 
@@ -38,14 +38,23 @@ class CrossValidator:
         self.cv_save_dir = cv_save_dir
         
         if k_folds == None:
-            self.k_folds = self.params.k_folds
+            print "Number of k folds not specified. Setting to 3"
+            self.k_folds = 3
         else:
             self.k_folds = k_folds
 
         if test_frac == None:
-            self.test_frac = self.params.test_frac
+            print "Test fraction of k-folds not specified. Setting to 0.15"
+            self.test_frac = 0.15
         else:
             self.test_frac = test_frac
+
+        #Make sure k_folds values make sense
+        if (self.k_folds>0) and (1./self.k_folds < self.test_frac):
+            print "ERROR!!"
+            print('test_frac ',self.test_frac,' too large for k=',
+            self.k_folds,' fold.') 
+
             
 
         self.nn_method = nn_method
@@ -66,7 +75,13 @@ class CrossValidator:
         from a seed value. Saving the seed value,k_folds, and test_frac will
         allow recovery of the exact same cross validation training/test splits
         """
-        self.seed = np.random.randint(1e7)
+        if seed == None:
+            self.seed = np.random.randint(1e7)
+            print "Setting shuffling seed for cross validation to",self.seed
+        else:
+            self.seed = seed
+        
+        #self.seed = np.random.randint(1e7)
         self.shuffled_indices = np.random.RandomState(self.seed).\
                                             permutation(range(self.nuc_data.num_records))
 
@@ -88,9 +103,13 @@ class CrossValidator:
                 self.nuc_classifier_list[k] = NucClassifier( self.sess,
                                                              self.train_batcher_list[k],
                                                              self.test_batcher_list[k],
-                                                             self.params,
-                                                             kfold_dir)
-
+                                                             self.params.num_epochs,
+                                                             self.params.learning_rate,
+                                                             self.params.batch_size,
+                                                             self.params.seq_len,
+                                                             kfold_dir,
+                                                             self.params.keep_prob,
+                                                             self.params.beta1)
                 print "Building model for k-fold", k
                 self.nuc_classifier_list[k].build_model(self.nn_method)
 

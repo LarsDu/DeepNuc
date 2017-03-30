@@ -41,8 +41,6 @@ class NucClassifier:
                  save_dir,
                  keep_prob=0.5,
                  beta1=0.9):
-        
-    
     
         self.sess = sess
         self.train_batcher = train_batcher
@@ -88,7 +86,7 @@ class NucClassifier:
                                                    self.keep_prob_placeholder,
                                                    self.num_classes)
 
-        if self.num_classes = 2:
+        if self.num_classes == 2:
             self.probs = tf.nn.sigmoid(self.logits)
         else:
             self.probs = tf.nn.softmax(self.logits)
@@ -196,7 +194,6 @@ class NucClassifier:
     def train(self):
         """
         Train a model
-
         :returns: Tuple of two dicts: training metrics, and testing metrics
         """
     
@@ -210,14 +207,14 @@ class NucClassifier:
         test_results_dict={}
                    
         
-        for epoch in xrange(self.params.num_epochs):
+        for epoch in xrange(self.num_epochs):
             for i in xrange(self.train_steps_per_epoch):
                 (labels_batch,dna_seq_batch) = self.train_batcher.pull_batch(self.batch_size)
             
                 feed_dict={
                     self.dna_seq_placeholder:dna_seq_batch,
                     self.labels_placeholder:labels_batch,
-                    self.keep_prob_placeholder:self.params.keep_prob
+                    self.keep_prob_placeholder:self.keep_prob
                     }
 
                 _,loss_value,_ =self.sess.run([self.train_op, self.loss, self.logits],
@@ -364,7 +361,6 @@ class NucClassifier:
         #lh is in bits of information
         #Rescale logo_heights to r_rel
         scaled_lh = lh * r_rel/(max_relevance - min_relevance)
-
         logosheets.append(scaled_lh*25)
         input_seqs.append(dna_seq_batch[0])
 

@@ -6,10 +6,11 @@ import os
 #The following statement is equiv to sys.path.append("../")
 sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname(__file__),os.path.pardir,os.path.pardir)))
-#from DuNucInput import ConvertToHdf5 as Converter
-#from .. import converter.ConvertToHdf5 as Converter
-#from ../ BedReader
-#from DuNucInput import DinucShuffleReader
+
+from deepnuc.converters import ConvertToHdf5
+from deepnuc.readers import BedReader 
+from deepnuc.readers import DinucShuffleReader
+
 
 
 """

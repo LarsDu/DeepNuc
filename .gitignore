@@ -4,6 +4,12 @@ test/
 OLD/
 **/OLD/
 
+#Ignore emacs draft files
+*~
+**/*~
+*#
+**/*#
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

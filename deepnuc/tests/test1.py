@@ -102,8 +102,8 @@ def tf4():
                     k_folds =0,
                     test_frac=0.2)
 
-    save_dir = "example_data/example_train/checkpoints"
-
+    save_dir = "example_data/example_train"
+    
 
     with tf.Session() as sess:
         nc_test = NucClassifier( sess,
@@ -140,7 +140,7 @@ def tf5():
     test_batcher = DataBatcher(nuc_data,test_indices)
 
 
-    params = Params(training_file=None,
+    params = ModelParams(training_file=None,
                     testing_file=None,
                     num_epochs=100,
                     keep_prob=0.5,
@@ -172,7 +172,7 @@ def tf6():
     fname = "example_data/worm_tss_nib.h5"
     nuc_data = NucHdf5(fname)
 
-    params = Params(training_file = None,
+    params = ModelParams(training_file = None,
                     testing_file = None,
                     num_epochs = 5,
                     keep_prob = 0.5,
@@ -216,7 +216,7 @@ def tf7():
     test_batcher = DataBatcher(nuc_data,test_indices)
 
 
-    params = Params(training_file=None,
+    params = ModelParams(training_file=None,
                     testing_file=None,
                     num_epochs=10,
                     keep_prob=0.5,

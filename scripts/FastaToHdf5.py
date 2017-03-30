@@ -7,9 +7,9 @@ import os
 sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname(__file__),os.path.pardir)))
 
-from deepdna.converters import ConvertToHdf5
-from deepdna.readers import FastaReader 
-from deepdna.readers import DinucShuffleReader
+from deepnuc.converters import ConvertToHdf5
+from deepnuc.readers import FastaReader 
+from deepnuc.readers import DinucShuffleReader
 
 
 

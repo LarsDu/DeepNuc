@@ -7,8 +7,8 @@ import os
 import math
 
 import sys
-sys.path.append('../deepdna') 
-import deepdna.dubiotools as dbt
+sys.path.append('../deepnuc') 
+import deepnuc.dubiotools as dbt
 
 #import pygtk
 #pygtk.require('2.0')

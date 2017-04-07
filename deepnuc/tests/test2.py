@@ -7,7 +7,7 @@ import tensorflow as tf
 import numpy as np
 
 from nucdata import *
-from nucclassifier import NucClassifier
+from nucbinaryclassifier import NucBinaryClassifier
 from databatcher import DataBatcher 
 from modelparams import *
 from logger import Logger
@@ -18,7 +18,7 @@ from crossvalidator import CrossValidator
 def main():
     params = ModelParams( training_file=None,
                           testing_file=None,
-                          num_epochs=20,
+                          num_epochs=35,
                           learning_rate=1e-4,
                           batch_size=24,
                           seq_len=600,
@@ -27,16 +27,21 @@ def main():
     cv_k_folds = 3
     cv_test_frac = 0.15
         
-    test_classifier(params)
-    #test_cross_validation()
-    test_relevance()
+    #test_classifier(params,"train")
+
+    test_classifier(params,"relevance")
+
+    #test_cross_validation(params)
+    
     #test_mutation_map()
 
 
 
 
-def test_classifier(params):
-    sys.stdout = Logger('logt2.log')
+def test_classifier(params,mode="train"):
+
+    save_dir = "example_data/april_lab_meeting"
+    sys.stdout = Logger(save_dir+os.sep+mode+".log")
     print "Test classifier"
 
     fname = "example_data/worm_tss_nib.h5"
@@ -54,14 +59,17 @@ def test_classifier(params):
     print test_indices.shape
     print train_indices.shape
 
+
     train_batcher = DataBatcher(nuc_data,train_indices)
     test_batcher = DataBatcher(nuc_data,test_indices)
 
-    save_dir = "example_data/test2"
-
-    
+    if mode =="train":
+        keep_prob = params.keep_prob
+    elif mode =="relevance":
+        keep_prob=1.0
+         
     with tf.Session() as sess:
-        nc_test = NucClassifier(sess,
+        nc_test = NucBinaryClassifier(sess,
                                 train_batcher,
                                 test_batcher,
                                 params.num_epochs,
@@ -69,18 +77,57 @@ def test_classifier(params):
                                 params.batch_size,
                                 params.seq_len,
                                 save_dir,
-                                params.keep_prob,
+                                keep_prob,
                                 params.beta1)
 
         nc_test.build_model(nucconvmodel.inferenceA)
-        nc_test.train()
+
+        if mode == 'train':
+            nc_test.train()
+        elif mode == 'relevance':
+            all_batcher = DataBatcher(nuc_data,range(nuc_data.num_records))
+            nc_test.relevance_batch_by_index(all_batcher,5004)
+            nc_test.relevance_batch_by_index(all_batcher,5007)
+            nc_test.relevance_batch_by_index(all_batcher,5009)
+
+            nc_test.eval_train_test()
 
 
-def test_relevance():
-    pass
+
+    
+def test_cross_validation(params):
+    cv_save_dir = "example_data/cv_test2"
+    if not os.path.exists(cv_save_dir):
+        os.makedirs(cv_save_dir)
         
-def test_cross_validation():
-    pass
+    
+    logf = cv_save_dir+os.sep+"cv_test2.log"
+    sys.stdout = Logger(logf)
+    print "Test cross-validation"
+
+    fname = "example_data/worm_tss_nib.h5"
+    nuc_data = NucHdf5(fname)
+
+    seed = 12415
+
+    test_frac = .2
+    
+
+    #print nuc_data.pull_index_onehot(5)[1].shape
+
+
+    with tf.Session() as sess:
+        cv = CrossValidator( sess,
+                             NucBinaryClassifier,
+                        params,
+                        nuc_data,
+                        cv_save_dir,
+                        seed=seed,
+                        nn_method=nucconvmodel.inferenceA,
+                        k_folds=3,
+                        test_frac=0.15)
+
+    
 
 def test_mutation_map():
     pass

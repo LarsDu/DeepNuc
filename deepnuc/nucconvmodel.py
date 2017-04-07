@@ -4,7 +4,10 @@ import dtlayers as dtl
 
 
 
-def inferenceA(dna_seq_placeholder,keep_prob_placeholder,num_classes):
+def inferenceA(dna_seq_placeholder,
+               keep_prob_placeholder,
+               num_classes,
+               concat_revcom = False):
     with tf.variable_scope("inference_a",reuse=None) as scope:
         
         print "Running inferenceA"
@@ -13,7 +16,7 @@ def inferenceA(dna_seq_placeholder,keep_prob_placeholder,num_classes):
         pad_size=0
 
         #Reshape and pad nucleotide input
-        x_nuc = dtl.NucInput(dna_seq_placeholder,pad_size,'dna_input')
+        x_nuc = dtl.NucInput(dna_seq_placeholder,pad_size,'dna_input',concat_revcom)
         cl1 = dtl.Conv2d(x_nuc,
                        filter_shape=[1,
                                      dna_conv_filter_width,
@@ -40,9 +43,10 @@ def inferenceA(dna_seq_placeholder,keep_prob_placeholder,num_classes):
         l2 = dtl.Linear(r3,50,'linear2' )  
         r4 = dtl.Relu(l2)
         l3 = dtl.Linear(r4,num_classes,'linear3' )
-
+        drop_out = dtl.Dropout(l3,keep_prob_placeholder,name="dropout")
         #nn = dtl.Network(x_nuc,[cl1,r1,p1, cl2,r2,p2,flat,l1,r3,l2,r4,l3],bounds=[0.,1.])
-        nn = dtl.Network(x_nuc,[l3],bounds=[0.,1.])
+        nn = dtl.Network(x_nuc,[drop_out],bounds=[0.,1.])
+        
         logits = nn.forward()
         return logits,nn
 
@@ -84,9 +88,9 @@ def inferenceB(dna_seq_placeholder,keep_prob_placeholder,num_classes):
         l2 = dtl.Linear(r3,50,'linear2' )  
         r4 = dtl.Relu(l2)
         l3 = dtl.Linear(r4,num_classes,'linear3' )
-
+        drop_out = dtl.Dropout(l3,keep_prob_placeholder,name="dropout")
         #nn = dtl.Network(x_nuc,[cl1,r1,p1, cl2,r2,p2,flat,l1,r3,l2,r4,l3],bounds=[0.,1.])
-        nn = dtl.Network(x_nuc,[l3],bounds=[0.,1.])
+        nn = dtl.Network(x_nuc,[drop_out],bounds=[0.,1.])
         logits = nn.forward()
         return logits,nn
 
@@ -160,11 +164,11 @@ def inferenceC(dna_seq_placeholder,keep_prob_placeholder,num_classes):
         r4 = dtl.Relu(l2)
         l3 = dtl.Linear(r4,num_classes,'linear3' )
 
-
+        drop_out = dtl.Dropout(l3,keep_prob_placeholder,name="dropout")
 
         #Passing the last layer to the Network constructor
         #will automatically initialize Network with every preceding layer
-        nn = dtl.Network(x_nuc,[l3],bounds=[0.,1.])
+        nn = dtl.Network(x_nuc,[drop_out],bounds=[0.,1.])
         logits = nn.forward()
 
         return logits,nn

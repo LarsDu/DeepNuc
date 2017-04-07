@@ -3,6 +3,8 @@ example_data/
 test/
 OLD/
 **/OLD/
+MIRNA_MODELS/
+DREAM5_MODELS/
 
 #Ignore emacs draft files
 *~

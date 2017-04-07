@@ -2,6 +2,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import tfbiotools
 from tensorflow.contrib.layers.python.layers import batch_norm as batch_norm
 
 """
@@ -14,12 +15,16 @@ Written by Lawrence Du
 """
 
 class NucInput:
-    def __init__(self,_input,pad_size,name='nuc_input'):
-        #Nucleotide input should be assumed to be shape =[batch_size,4,seq_len]
+    def __init__(self,_input,pad_size,name='nuc_input',concat_revcom = False):
+        #Nucleotide input should be assumed to be shape =[batch_size,seq_len,4]
         #reshape to [batch_size,height=1,width=seq_len,num_channels=4]
-        
-        self._input=_input
-        self.input_shape = self._input.get_shape().as_list() #[b,4,seq_len]
+        if concat_revcom:
+            print "Reverse complement enabled"
+            self._input = tf.concat([_input,tfbiotools.revcom_onehot_tcag(_input)],axis=1)
+        else:
+            self._input=_input
+        self.input_shape = self._input.get_shape().as_list() #[b,seq_len,4]
+        print self.input_shape
         self.seq_len = self.input_shape[2]       
 
         self.pad_size = pad_size
@@ -30,15 +35,14 @@ class NucInput:
         #when using 'VALID' mode. For nuc input of 600 bp with filter 25, a pad_size=12
         # will produce convolved output that is 600 elements wide
     
-        
-        
+               
         #Apply paddings
         self.output = self.forward(self._input)
         self.output_shape = self.output.get_shape().as_list()
 
     def forward(self, input_data):
-        #[b,4,seq_len]--transperm-->[b,seq_len,4]--expand_dim-->[b,1,seq_len,4]-->pad
-        output = tf.expand_dims(tf.transpose(input_data, perm=[0,2,1]),1)
+        #[b,seq_len,4]--expand_dim-->[b,1,seq_len,4]-->pad
+        output = tf.expand_dims(input_data,1)
         return tf.pad(output,self.paddings,mode="CONSTANT")
 
     def backward(self,DY):
@@ -258,8 +262,8 @@ class Linear(Layer):
         Z = tf.matmul(X,V)+1e-9
         S = tf.div(Rj,Z)
         C = tf.matmul(S,tf.transpose(V)) # S by maxed weights
-        #xfi = tf.mul(self.X,C)
-        Ri = tf.mul(X, C)
+        #xfi = tf.multiply(self.X,C)
+        Ri = tf.multiply(X, C)
 
         return Ri
         
@@ -319,7 +323,7 @@ class Relu(Layer):
     def gradprop(self,DY):
         #Return DX for positive layer inputs only
         #(positive X inputs into layer, not positive DY inputs)
-        DX = tf.mul(DY,self.relu_mask) 
+        DX = tf.multiply(DY,self.relu_mask) 
         return DX 
     
     def relevance_backprop_zplus(self,Rj):
@@ -367,56 +371,6 @@ class Flatten(Layer):
         return tf.reshape (DY,self.input_shape)
 
 
-
-
-        
-class Conv2d_transpose(Layer):
-    """Note this does not have a relevance backprop rule implemented"""
-    """Note batch_size cannot be None in the placeholder"""
-    
-    def __init__(self,
-                 input_layer,
-                 filter_shape,
-                 output_shape,
-                 strides = [1,1,1,1],
-                 padding = 'SAME',
-                 name = ''):
-        self.input_layer = input_layer
-        #self.batch_size = batch_size
-        self.filter_shape = filter_shape
-        self.output_shape = output_shape #Includes batch_size
-        self.X = self.input_layer.output
-        self.input_shape = self.X.get_shape().as_list()
-        self.padding = padding
-        self.strides = strides
-        self.name = name
-    
-        with tf.variable_scope(self.name) as scope:
-            self.W = init_weights('weights',shape=self.filter_shape)
-            self.B = init_bias('bias',shape=[self.filter_shape[3]])
-
-        self.output = self.forward(self.X,self.W)
-
-        print "Conv2d_transpose input",self.name,"shape:",self.input_shape
-        print "Conv2d_transpose filter",self.name,"shape:",self.filter_shape
-        print "Conv2d_transpose output shape",self.output_shape,"\n"
-
-        
-    def forward(self,X,W):
-        with tf.variable_scope(self.name+'_forward') as scope:
-
-            filtered = tf.nn.conv2d_transpose(X,W,self.output_shape,
-                                              strides=self.strides,
-                                              padding = self.padding)
-
-            return filtered
-
-    def gradprop(self,DY,W,B):
-        with tf.variable_scope(self.name+'_gradprop') as scope:
-            #print ("W shape:",self.W.get_shape())
-            DX =tf.nn.conv2d(DY,W,strides=self.strides,padding=self.padding)+B
-        #activation_summary(out)
-        return DX
 
        
        
@@ -485,23 +439,37 @@ class Conv2d(Layer):
 
        
     def gradprop(self,DY,W):
-        #Note: for now, the batch size for backward relevance propagation must be set
-        # to 1
+        '''
+        Note: Several modification needed to be done to get this to work for variable
+        batch sizes: https://github.com/tensorflow/tensorflow/issues/833
+        '''
 
-        #TODO: Make this op work for batch_size>1
-        #print "Conv back",DY.get_shape().as_list()
-        batch_size = 1
-        layer_input_shape = [batch_size,self.input_shape[1],
+        #Get dynamic input shape of DY (the output shape of this layer)
+        #This can be different for training and relevance decomposition
+        #Since batch size can differ
+        
+        #dy_input_shape = DY.get_shape().as_list() #static dy input shape
+        #dyn_batch_size = tf.shape(DY)[0]
+        
+        #out_shape = tf.pack([dyn_batch_size,
+        #                     self.input_shape[1],
+        #                     self.input_shape[2],
+        #                     self.input_shape[3]])
+
+        
+        #print "Layer input shape is",self.input_shape
+        out_shape = [1,self.input_shape[1],
                                         self.input_shape[2],
                                         self.input_shape[3]]
-
-        filtered = tf.nn.conv2d_transpose(DY,W,layer_input_shape,
+        
+        
+        filtered = tf.nn.conv2d_transpose(DY,W,
+                                          output_shape=out_shape,
                                           strides=self.strides,
                                           padding = self.padding)
                 
         
-        #print conv2d_transpose_output
-        #print "Custom op output",conv2d_transpose_output.get_shape().as_list()
+        
         return filtered
         
 
@@ -515,7 +483,7 @@ class Conv2d(Layer):
         Z = self.forward(self.X,W_max,zero_bias)
         S = tf.div(Rj,Z)
         C = self.gradprop(S,W_max)
-        Ri = tf.mul(self.X,C)
+        Ri = tf.multiply(self.X,C)
     
         #print ("conv Z shape",Z.get_shape())
         #print ("conv Z reduced shape",Z.get_shape())
@@ -608,7 +576,7 @@ class AvgPool(Layer):
             Z = self.forward(self.X)+1e-9
             S = tf.div(Rj,Z)
             C = self.gradprop(S)
-            Ri = tf.mul(self.X,C)
+            Ri = tf.multiply(self.X,C)
             #TODO: Troubleshoot this section
             #X is [b,1,128,48] y is [b,32,4,48]
             #B should be [b,1,128,48]
@@ -640,8 +608,8 @@ class AvgPool(Layer):
         #print "Depooled size",depooled_dy.get_shape().as_list()
         #print "Pooling gradient dims", self.gradient.get_shape().as_list()
 
-        DX = tf.mul(depadded,self.gradient)
-        #DX = tf.mul(depooled_dy,float(1./np.prod(self.pool_dims)))
+        DX = tf.multiply(depadded,self.gradient)
+        #DX = tf.multiply(depooled_dy,float(1./np.prod(self.pool_dims)))
         return DX
 
 
@@ -704,7 +672,7 @@ class MaxPool(Layer):
             Z = self.forward(self.X)+1e-9
             S = tf.div(Rj,Z)
             C = self.gradprop(S)
-            Ri = tf.mul(self.X,C)
+            Ri = tf.multiply(self.X,C)
             #activaton_summary(Ri)
         return Ri
 
@@ -732,8 +700,8 @@ class MaxPool(Layer):
         #print "Depooled size",depooled_dy.get_shape().as_list()
         #print "Pooling gradient dims", self.gradient.get_shape().as_list()
 
-        DX = tf.mul(depadded,self.gradient)
-        #DX = tf.mul(depooled_dy,float(1./np.prod(self.pool_dims)))
+        DX = tf.multiply(depadded,self.gradient)
+        #DX = tf.multiply(depooled_dy,float(1./np.prod(self.pool_dims)))
         return DX
 
 
@@ -783,7 +751,7 @@ class BatchNorm(Layer):
         #This is not tested
         #                      ----Larry Du
        
-        #DX = tf.mul(DY,self.gradient)
+        #DX = tf.multiply(DY,self.gradient)
         DX = DY
         return DX
     
@@ -874,36 +842,125 @@ def depool_2d(value,rep_list):
     """
     shape = value.get_shape().as_list()
     inner_dims = shape[1:-1]
+    #dyn_batch_size = tf.shape(value)[0]
+    if len(inner_dims) != 2:
+        print ("Number of non-batch/non-channel dimensions of input",
+               "does not match rep_list")
+        return None
+
+    num_channels = shape[-1]
+    
+    #Duplicate each column rep_list[1] times
+    out = tf.reshape(value,[-1,inner_dims[0]*inner_dims[1],1,num_channels])
+    out = tf.tile(out,[1,1,rep_list[1],1])
+    out = tf.reshape(out,[-1,inner_dims[0],inner_dims[1]*rep_list[1],num_channels])
+    
+
+    #Duplicate each row rep_list[0] times
+    out = tf.tile(out,[1,1,rep_list[0],1])
+    final_dims = [-1,inner_dims[0]*rep_list[0],inner_dims[1]*rep_list[1],num_channels]
+    
+    out = tf.reshape(out,final_dims)
+    
+    return out
+
+
+
+
+def dynamic_depool_2d(value,rep_list,static_shape,dyn_batch_size):
+    """
+    Duplicates the interior dimensions (rows and columns) of a 4d tensor
+    where the first and last dimensions are batch_size and num channels
+    Dynamically determines shape
+    
+    :param value: A Tensor of shape [b, d0, d1,h]
+    :return: A Tensor of shape [b, rep[0]*d0, rep[1]*d1, ch]
+    
+    
+    """
+    #TODO: Adapt this method for inputs generated by conv2d_transpose with
+    #dynamic batch sizes
+    inner_dims = static_shape[1:-1]
     
     if len(inner_dims) != 2:
         print ("Number of non-batch/non-channel dimensions of input",
                "does not match rep_list")
         return None
 
-    #batch_size = shape[0] #this should be None
     num_channels = shape[-1]
-    #out = (tf.reshape(value, [-1] + shape[-num_dims:]))
-
+    
     #Duplicate each column rep_list[1] times
     out = tf.reshape(value,[-1,inner_dims[0]*inner_dims[1],1,num_channels])
     out = tf.tile(out,[1,1,rep_list[1],1])
     out = tf.reshape(out,[-1,inner_dims[0],inner_dims[1]*rep_list[1],num_channels])
+    
 
     #Duplicate each row rep_list[0] times
-
     out = tf.tile(out,[1,1,rep_list[0],1])
     final_dims = [-1,inner_dims[0]*rep_list[0],inner_dims[1]*rep_list[1],num_channels]
+    
     out = tf.reshape(out,final_dims)
-        
     
     return out
 
 
 
+
     
 
 
 
+
+'''        
+class Conv2d_transpose(Layer):
+    """Note this does not have a relevance backprop rule implemented"""
+    """Note batch_size cannot be None in the placeholder"""
+    
+    def __init__(self,
+                 input_layer,
+                 filter_shape,
+                 output_shape,
+                 strides = [1,1,1,1],
+                 padding = 'SAME',
+                 name = ''):
+        self.input_layer = input_layer
+        #self.batch_size = batch_size
+        self.filter_shape = filter_shape
+        self.output_shape = output_shape #Includes batch_size
+        self.X = self.input_layer.output
+        self.input_shape = self.X.get_shape().as_list()
+        self.padding = padding
+        self.strides = strides
+        self.name = name
+    
+        with tf.variable_scope(self.name) as scope:
+            self.W = init_weights('weights',shape=self.filter_shape)
+            self.B = init_bias('bias',shape=[self.filter_shape[3]])
+
+        self.output = self.forward(self.X,self.W)
+
+        print "Conv2d_transpose input",self.name,"shape:",self.input_shape
+        print "Conv2d_transpose filter",self.name,"shape:",self.filter_shape
+        print "Conv2d_transpose output shape",self.output_shape,"\n"
+
+        
+    def forward(self,X,W):
+        with tf.variable_scope(self.name+'_forward') as scope:
+
+            filtered = tf.nn.conv2d_transpose(X,W,self.output_shape,
+                                              strides=self.strides,
+                                              padding = self.padding)
+
+            return filtered
+
+    def gradprop(self,DY,W,B):
+        with tf.variable_scope(self.name+'_gradprop') as scope:
+            #print ("W shape:",self.W.get_shape())
+            DX =tf.nn.conv2d(DY,W,strides=self.strides,padding=self.padding)+B
+        #activation_summary(out)
+        return DX
+
+'''
 
 def activation_summary(in_op):
     """Helper to create summaries for activations.

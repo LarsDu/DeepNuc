@@ -1,35 +1,13 @@
 import numpy as np
+import dubiotools as dbt
 
-def main():
-    oh_nuc = np.asarray([[1.,0,0,0,0],[0,1,0,0,0],[0,0,1,1,0],[0,0,0,0,1]])
-    print oh_nuc.shape
 
-    print "oh_nuc"
-    print oh_nuc
-    
-    #for i in range(oh_nuc.shape[1]):
-    #    print oh_nuc[:,i]
-
-    ohi = OnehotSeqMutator(oh_nuc)
-    print oh_nuc.shape
-
-    
-    print ohi.next()
-    print ohi.next()
-    print ohi.next()
-    print ohi.next()
-    print ohi.next()
-    print ohi.next()
-    print ohi.next()
-    print ohi.next()
-    print ohi.next()
-    
 
 
 class OnehotSeqMutator:
     """An iterator for making pointwise mutations for a 4xn onehot numpy array
        representing nucleic acid sequence. Useful for passing mutation variants
-       to deep neural networks for making mutation maps as described in Alipanhi 2015
+       to deep neural networks for making mutation maps as described in Alipanahi 2015
     
     """
 
@@ -39,7 +17,8 @@ class OnehotSeqMutator:
         :param oh_nuc: an nx4 onehot numpy array
 
         """
-        self.oh_nuc = oh_nuc
+        self.seq_len = oh_nuc.shape[1]
+        self.oh_nuc = np.copy(oh_nuc)
         self.i = 0
         self.nuci=0
         self.tri_count=0
@@ -82,6 +61,47 @@ class OnehotSeqMutator:
             self.oh_nuc[(onei+1)%4,self.nuci-1]=self.oh_nuc[onei,self.nuci-1]
             self.oh_nuc[onei,self.nuci-1]=0
 
+
+    def pull_batch(batch_size):
+        #Batches are shape [b,seq_len,4]
+        full_batch = np.zeros((batch_size,self.seq_len,4))
+        for i in range(batch_size):
+            full_batch[i,:,:] = self.next()
+        return full_batch
+    
+    def pack():
+        pass
+            
+def main():
+    #Test code for this class
+    oh_nuc = np.asarray([[1.,0,0,0,0],[0,1,0,0,0],[0,0,1,1,0],[0,0,0,0,1]])
+    print oh_nuc.shape
+
+    print "oh_nuc"
+    print dbt.onehot_to_nuc(oh_nuc)
+    
+    #for i in range(oh_nuc.shape[1]):
+    #    print oh_nuc[:,i]
+
+    ohi = OnehotSeqMutator(oh_nuc)
+    print oh_nuc.shape
+
+    '''
+    print ohi.next()
+    print ohi.next()
+    print ohi.next()
+    print ohi.next()
+    print ohi.next()
+    print ohi.next()
+    print ohi.next()
+    print ohi.next()
+    print ohi.next()
+    '''
+    nucl = [dbt.onehot_to_nuc(next_seq) for next_seq in ohi]
+    print dbt.onehot_to_nuc(oh_nuc)
+    print nucl
+
+    
         
 if __name__ == "__main__":
     main()

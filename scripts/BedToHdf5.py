@@ -2,10 +2,10 @@ import gflags
 import sys
 import os
 
-#Go two directories up and append to path to access the deepdna package
+#Go one directory up and append to path to access the deepdna package
 #The following statement is equiv to sys.path.append("../")
 sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__),os.path.pardir,os.path.pardir)))
+    os.path.abspath(os.path.join(os.path.dirname(__file__),os.path.pardir)))
 
 from deepnuc.converters import ConvertToHdf5
 from deepnuc.readers import BedReader 

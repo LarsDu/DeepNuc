@@ -220,7 +220,6 @@ def uint8_numpy_to_onehot_nucs(np_arr):
         #Truncate final character
         return np.concatenate(nuc_list,axis=1)
 
-    
 
     
 

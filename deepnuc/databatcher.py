@@ -10,11 +10,12 @@ class DataBatcher:
     nuc_data to create training and test splits
     """
     
-    def __init__(self,nuc_data,indices=None):
+    def __init__(self,nuc_data,indices=None,use_onehot_labels=True):
         self.nuc_data = nuc_data
+
         self.num_classes = nuc_data.num_classes
         self.seq_len = nuc_data.seq_len
-        
+        self.use_onehot_labels = use_onehot_labels
         
         self.indices = indices
         self.num_records = len(self.indices)
@@ -22,7 +23,34 @@ class DataBatcher:
         self.perm_indices = np.random.permutation(self.indices)
         self.epoch_tracker = EpochTracker(self.num_records)
 
-                     
+
+
+    
+    def get_label_min_max(self):
+        """Used to calculate mean and standard deviation
+         Necessary for y feature normalization for regression"""
+
+        all_labels = np.zeros((self.num_records))
+        for i in range(self.num_records):
+            label,_ = self.nuc_data.pull_index_onehot(i)
+            all_labels[i] = label
+
+        return np.min(all_labels),np.max(all_labels)
+    
+    def get_label_mean_std(self):
+        """Used to calculate mean and standard deviation
+         Necessary for y feature normalization for regression"""
+
+        all_labels = np.zeros((self.num_records))
+        for i in range(self.num_records):
+            label,_ = self.nuc_data.pull_index_onehot(i)
+            all_labels[i] = label
+
+        mean = np.mean(all_labels)
+        std = np.std(all_labels)
+
+        return mean,std    
+        
     def set_perm_indices(self,new_indices):
         """
         Used for setting different perm_indices
@@ -52,7 +80,7 @@ class DataBatcher:
         """
         
         #Preallocate
-        dna_seq_batch = np.zeros((batch_size,4,self.seq_len))
+        dna_seq_batch = np.zeros((batch_size,self.seq_len,4))
         labels_batch = np.zeros((batch_size,self.num_classes))
 
         batch_start = self.epoch_tracker.cur_index
@@ -60,9 +88,12 @@ class DataBatcher:
         batch_indices = self.perm_indices[batch_start:batch_end]
         for bi, pindex in enumerate(batch_indices):
             numeric_label, dna_seq_data = self.nuc_data.pull_index_onehot(pindex)
-            labels_data = self.numeric_to_onehot_label(numeric_label)
             dna_seq_batch[bi,:,:] = dna_seq_data #Must be onehot
-            labels_batch[bi,:] = labels_data #ie: [0 1]
+            if self.use_onehot_labels == True:
+                labels_data = self.numeric_to_onehot_label(numeric_label)#ie: [0 1]
+            else:
+                labels_data = numeric_label #ie: 1.2345 for regression
+            labels_batch[bi,:] = labels_data 
         return labels_batch,dna_seq_batch
 
 
@@ -88,15 +119,18 @@ class DataBatcher:
 
     def pull_batch_by_index(self,index,batch_size):
         """ Pull a batch from self.indices by index """
-        dna_seq_batch = np.zeros((batch_size,4,self.seq_len))
+        dna_seq_batch = np.zeros((batch_size,self.seq_len,4))
         labels_batch = np.zeros((batch_size,self.num_classes))
         batch_start = index
         batch_end = batch_start + batch_size
         batch_indices = self.indices[batch_start:batch_end]
         for bi, index in enumerate(batch_indices):
             numeric_label, dna_seq_data = self.nuc_data.pull_index_onehot(index)
-            labels_data = self.numeric_to_onehot_label(numeric_label)
             dna_seq_batch[bi,:,:] = dna_seq_data #Must be onehot
+            if self.use_onehot_labels == True:
+                labels_data = self.numeric_to_onehot_label(numeric_label)#ie: [0 1]
+            else:
+                labels_data = numeric_label #ie: 1.2345 for regression
             labels_batch[bi,:] = labels_data #ie: [0 1]
         return labels_batch,dna_seq_batch
 

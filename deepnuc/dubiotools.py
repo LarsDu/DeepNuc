@@ -39,6 +39,8 @@ def get_str_from_coords(SeqObj,start,end):
 
 vectorDict = {'T':[ 1, 0, 0, 0 ],
               't':[ 1, 0, 0, 0 ],
+              'U':[ 1, 0, 0, 0 ],
+              'u':[ 1, 0, 0, 0 ],
               'C':[ 0, 1, 0, 0 ],
               'c':[ 0, 1, 0, 0 ],
               'A':[ 0, 0, 1, 0 ],
@@ -50,26 +52,22 @@ vectorDict = {'T':[ 1, 0, 0, 0 ],
                   }
 
 
-def seq_to_onehot_topdown(seqObj):
+def seq_to_onehot(seqObj):
     """
     Converts a Seq object into a set of four boolean one-hot vectors
     vectorDict order is T C A G. Remember the proper command
     for transposing a numpy array is myarray.transpose()
-    """
 
+    returns a nx4 onehot representation of the nucleotide sequences in question
+    """
+   
     seq_str = str(seqObj)
 
     onehot = np.zeros((len(seq_str),4),dtype='float32')
     for i,letter in enumerate(seq_str):
-        
         onehot[i,:] = np.array(vectorDict[letter])
     return onehot
 
-
-def seq_to_onehot(seqObj):
-    #Converts a sequence to a 4 one-hot vectors in the order TCAG
-    seq = seq_to_onehot_topdown(seqObj)
-    return seq.transpose()
 
 ###Methods for generating random nucleotide sequences, and random nucleotide
 ### sequences seeded with user specified motifs. These will be used to generate
@@ -263,7 +261,7 @@ def motif_to_convfilter(motifObj,filter_width):
 
 def seq_to_convfilter(seqObj,filter_width=9):
    
-    onehot = seq_to_onehot_topdown(seqObj)
+    onehot = seq_to_onehot(seqObj).T
     #We want to convert this one_hot of shape [filter_width,4]
     # to a [1,filter_width,4,1] filter (remember the last dim,
     #dim_3 is used by tensorflow in the case you have multiple filters).
@@ -301,7 +299,7 @@ def seq_to_convfilter(seqObj,filter_width=9):
 def seq_to_4d_onehot(seqObj):
     # Convert Seq object (BioPython format) to a numpy ndarray
     # with the shape [batch_size=1,height=1,width=seq_len,num_channels=4]
-    onehot = seq_to_onehot_topdown(seqObj) #shape is [seq_len,4]
+    onehot = seq_to_onehot(seqObj).T #shape is [seq_len,4]
     return onehot[np.newaxis,np.newaxis,:,:]
 
 
@@ -390,7 +388,8 @@ def onehot_4d_to_nuc(onehot_4d,output_file=None,include_fasta_header=False):
     if (output_file !=None):
         #Output to stdout
         sys.stdout = open(output_file,'w')
-        
+
+
     onehot_4d = np.squeeze(onehot_4d,axis=1)
     #[num_fasta_entries,seq_len,num_channels =4]
     num_entries = onehot_4d.shape[0]

@@ -1,4 +1,5 @@
 import sys
+import os
 
 """
 A class for logging data
@@ -17,6 +18,16 @@ class Logger(object):
     def __init__(self,log_file="log1.log"):
 
         self.terminal = sys.stdout
+
+
+        self.base_dir = os.path.splitext(log_file)[0]
+        try:
+            os.makedirs(self.base_dir)
+        except OSError:
+            if not os.path.isdir(self.base_dir):
+                raise
+
+        
         self.log_file = log_file
         self.log = open(self.log_file, "a")
         print "Saving log to",self.log_file

@@ -34,29 +34,65 @@ class BaseNucData():
     def num_records(self,new_value):
         return new_value
 
-
-    @abstractproperty
-    def num_classes(self,new_value):
-        return new_value
-    
+   
     @abstractproperty
     def seq_len(self,new_value):
         return new_value
     '''
     
+class NucMemoryRegression(BaseNucData):
+    '''Just load nucleotide sequences and labels into two equally
+       sized lists.
+       Labels are quantitative rather than onehot
+       This class was originall written to work with DREAM5 data
+    '''
+    def __init__(self):
+        self.nuc_seqs = []
+        self.labels = []
+        self.num_classes=1
+
+    def add_seq_labels(self,seq_str,label):
+        self.nuc_seqs.append(str(seq_str))
+        self.labels.append(float(label))
     
+        
+    def calc_properties(self):
+        self.seq_len = len(self.nuc_seqs[0])
+        self.num_records = len(self.labels)
+        assert self.num_records == len(self.nuc_seqs),\
+            "Lens of labels list and nuc_seqs list not equal"
+        
+
+    def pull_index_nucs(self,index):
+        return self.labels[index],self.nuc_seqs[index]
+
+    def pull_index_onehot(self,index):
+        return self.labels[index],dbt.seq_to_onehot(self.nuc_seqs[index])
+
+    
+    def close(self):
+        """ Dummy method for compatibility with NucHdf5"""
+                     
+        
+        
+        
 class NucFastaMemory(BaseNucData):
-    """ Load a set of fasta files into memory """
+    """ Load a set of fasta files into memory. Labels should be of type
+        classification """
     
     def __init__(self, fasta_files, seq_len):
         self.fasta_files = fasta_files
         self.num_records = 0
         self.seq_len = seq_len
-        self.nibble_seq_len = int(seq_len//2+seq_len%2 +4)
+        #self.nibble_seq_len = int(seq_len//2+seq_len%2 +4)
         ##List of every fasta seq object
         self.seq_parser_list = []
 
+        #For now, this object must be used with binary classifiers
+        self.num_classes =2 
+        
         #List holding tuples for index ranges corresponding to different labels
+        #Example: Fasta1.fa has 3 records. Fasta2.fa has 4. self.bounds =[(0,3),(3,7)]
         self.bounds = []
         
         #Populate seq_parser list (This is quite memory intensive)
@@ -85,7 +121,7 @@ class NucFastaMemory(BaseNucData):
     def pull_index_onehot(self,index):
         numeric_label = self.label_from_index(index)
         iseq = self.seq_parser_list[index].seq
-        nuc_onehot = dbt.seq_to_onehot(iseq)
+        nuc_onehot = dbt.seq_to_onehot(iseq) #(outputs nx4)
         return numeric_label,nuc_onehot
 
     def label_from_index(self,index):
@@ -121,7 +157,7 @@ class NucHdf5(BaseNucData):
         if self.fhandle == None:
             print "Error, NucHdf5 must have fhandle specified!"
             print "Please open()"
-        numeric_label = self.data[index,0]
+        numeric_label = self.data[index,0] #single digit
         #Decode uint8 values to a nucleotide string
         nuc_string = nucnibble.uint8_numpy_to_nucs(self.data[index,1:])
         return numeric_label,nuc_string
@@ -130,7 +166,7 @@ class NucHdf5(BaseNucData):
         numeric_label = self.data[index,0]
         onehot_label = self.onehot_labels_list[numeric_label]
         #Decode uint8 values to a 4 x seq_len numpy one-hot array
-        nuc_onehot = nucnibble.uint8_numpy_to_onehot_nucs(self.data[index,1:])
+        nuc_onehot = nucnibble.uint8_numpy_to_onehot_nucs(self.data[index,1:]).T
         return numeric_label,nuc_onehot
             
     def close(self):

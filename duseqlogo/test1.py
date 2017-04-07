@@ -1,8 +1,4 @@
 
-#from dubioml.DuBiotools import DuBioTools as dbt
-#from duseqlogo.LogoTools import SeqLogo
-#from duseqlogo.LogoTools import PwmTools
-#from duseqlogo.LogoTools import LogoSheet
 from LogoTools import SeqLogo
 from LogoTools import PwmTools
 from LogoTools import LogoSheet

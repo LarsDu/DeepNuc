@@ -7,7 +7,7 @@ import os
 import math
 
 import sys
-sys.path.append('../deepnuc') 
+sys.path.append('../') 
 import deepnuc.dubiotools as dbt
 
 #import pygtk
@@ -454,7 +454,9 @@ class HeightLogo(BaseLogo):
             ranks = np.ndarray.tolist(filter_ranks[:,i])
             dy_pos = self.x_axis_line
             dy_neg = self.x_axis_line
+
             for rank_ind  in ranks:
+                
                 cur_let_str = row_dict[rank_ind]
                 cur_height = self.logo_matrix[rank_ind,i]
                 #ucLetter.BIT_SCALE = 100

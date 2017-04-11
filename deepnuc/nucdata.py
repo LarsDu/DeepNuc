@@ -39,21 +39,36 @@ class BaseNucData():
     def seq_len(self,new_value):
         return new_value
     '''
-    
-class NucMemoryRegression(BaseNucData):
-    '''Just load nucleotide sequences and labels into two equally
-       sized lists.
-       Labels are quantitative rather than onehot
-       This class was originall written to work with DREAM5 data
-    '''
+
+class NucDataRegression(BaseNucData):
+
     def __init__(self):
         self.nuc_seqs = []
         self.labels = []
         self.num_classes=1
 
     def add_seq_labels(self,seq_str,label):
+        """Add sequences and labels for regression 
+
+        :param seq_str: A string of nucleotides from alphabet AUTGC
+        :param label: A float value
+
+        """
         self.nuc_seqs.append(str(seq_str))
         self.labels.append(float(label))
+
+  
+        
+    
+class NucMemoryRegression(NucDataRegression):
+    '''Just load nucleotide sequences and labels into two equally
+       sized lists.
+       Labels are quantitative rather than onehot
+       This class was originall written to work with DREAM5 data
+    '''
+
+    def __init__():
+        super(NucDataRegression, self).__init__()
     
         
     def calc_properties(self):

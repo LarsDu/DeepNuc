@@ -31,11 +31,13 @@ class NucInput:
         #Paddings should only be applied to width dimension (dim[1])
         self.paddings = tf.constant([[0,0],[0,0],[self.pad_size,self.pad_size],[0,0]])
 
-        #I recommend fiddling with PaddingCalc.py to decide on padding amount
-        #when using 'VALID' mode. For nuc input of 600 bp with filter 25, a pad_size=12
-        # will produce convolved output that is 600 elements wide
-    
-               
+        '''
+        I recommend fiddling with PaddingCalc.py to decide on padding amount
+        when using 'VALID' mode. For nuc input of 600 bp with filter 25, a pad_size=12
+        will produce convolved output that is 600 elements wide
+                                                     --Larry
+        '''
+             
         #Apply paddings
         self.output = self.forward(self._input)
         self.output_shape = self.output.get_shape().as_list()
@@ -123,16 +125,14 @@ class ImageInput:
             
             
 class Network:
-    def __init__(self,input_layer,layers=None,bounds=[0.,1.]):
+    def __init__(self,input_layer,layers=None,bounds=[0.,1.],use_zbeta_first=True):
         #The input should contain a backward() function
         #to reverse any reshaping performed on the input
         self.input_layer = input_layer
-
-
+            
         #layers can be a list of layers or only the last layer in a network
         
         if len(layers) == 1:
-            
             self.layers = layers[0].get_layers_list()
             #If only one input, construct the list of layers
         else:
@@ -140,6 +140,8 @@ class Network:
         
         self.lowest = float(bounds[0])
         self.highest = float(bounds[1])
+
+        self.use_zbeta_first = use_zbeta_first
         
     def forward(self):
         """
@@ -157,7 +159,7 @@ class Network:
         for i,layer in enumerate(self.layers[::-1]):
             #note that i will always count from 0 to num_layers-1
             
-            if i == first_layer_ind:
+            if i == first_layer_ind and self.use_zbeta_first:
                 print "First layer detected",layer.name
                 #Set higher and lower bounds
                 layer.set_input_bounds(self.lowest,self.highest)
@@ -167,11 +169,6 @@ class Network:
                 
         input_x_relevance = prev_layer_rj
         return input_x_relevance
-
-    def input_relevance_backprop(self,final_rj):
-        rel_backprop = self.relevance_backprop(final_rj)
-        rel_backprop_deshaped = self._input.gradprop(rel_backprop)
-        return rel_backprop_deshaped
       
                
 
@@ -704,7 +701,7 @@ class MaxPool(Layer):
         #DX = tf.multiply(depooled_dy,float(1./np.prod(self.pool_dims)))
         return DX
 
-
+'''
 class BatchNorm(Layer):
     """
     #ref: http://r2rt.com/implementing-batch-normalization-in-tensorflow.html
@@ -764,6 +761,8 @@ class BatchNorm(Layer):
         #TODO: This method needs to be written
         return Rj
 
+'''
+        
     	
 class Dropout(Layer):
     def __init__(self,input_layer,keep_prob,name = 'dropout'):

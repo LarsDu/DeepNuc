@@ -174,7 +174,38 @@ def inferenceC(dna_seq_placeholder,keep_prob_placeholder,num_classes):
         return logits,nn
 
 
+def inferenceD(dna_seq_placeholder,
+               keep_prob_placeholder,
+               num_classes,
+               concat_revcom = False):
+    with tf.variable_scope("inference_d",reuse=None) as scope:
+        
+        print "Running inferenceD"
+        dna_conv_filter_width = 20
+        num_dna_filters = 16
+        pad_size=0
 
+        x_nuc = dtl.NucInput(dna_seq_placeholder,pad_size,'dna_input',concat_revcom)
+        cl1 = dtl.Conv2d(x_nuc,
+               filter_shape=[1,
+                             dna_conv_filter_width,
+                             4,
+                             num_dna_filters],
+               strides = [1,1,1,1],
+               padding = 'SAME',
+               name='dna_conv1')
+        
+        r1 = dtl.Relu(cl1)
+        p1 = dtl.AvgPool(r1,[1,4],'dna_avg_pool1')
+
+        flat = dtl.Flatten(p1)
+        l1 = dtl.Linear(flat,32,'linear1')
+        r2 = dtl.Relu(l1)
+        readout = dtl.Linear(r2,num_classes,'readout')
+        dropout = dtl.Dropout(readout,keep_prob_placeholder,name="dropout")
+        nn = dtl.Network(x_nuc,[dropout],bounds=[0.,1.])
+        logits=nn.forward()
+        return logits,nn
 
 
 

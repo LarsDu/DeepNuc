@@ -2,6 +2,7 @@ import sys
 import os
 import numpy as np
 import copy
+import pysam
 
 import dinucshuffle
 from Bio import SeqIO
@@ -30,7 +31,7 @@ class Reader:
             #Randomize Ns in seq
             seq = dinucshuffle.replaceN(seq.upper())
             nuc_list[bi] = dinucshuffle.dinuclShuffle(seq)
-            rec_ids[bi] = rec_ids[bi]+";shuffled"
+            rec_ids[bi] = rec_ids[bi]+"; dinucleotide_shuffled"
         return nuc_list, rec_ids
             
     
@@ -45,7 +46,7 @@ class BedReader(Reader):
     Sequentially reads entries from a bed file of genomic coordinates and
     outputs nucleotides on each pull(num_examples)
     """
-    def __init__(self,coord_file,genome_file,chr_sizes_file,seq_len):
+    def __init__(self,coord_file,genome_file,chr_sizes_file,seq_len,skip_first=True):
         Reader.__init__(self)
         self.coord_file = coord_file
         self.name = self.coord_file
@@ -56,7 +57,7 @@ class BedReader(Reader):
         self.index=0
         self.parser = None
         self.num_records = dbt.check_bed_bounds(self.coord_file,self.chr_sizes_dict) 
-        
+        self.skip_first = skip_first
         #self.genome_idx = pysam.FastaFile(self.genome_file)
         #self.open()
         #print "BedReader object is open. Remember to close by calling obj.close()"
@@ -66,6 +67,8 @@ class BedReader(Reader):
         print "Opening genome file",self.genome_file
         self.genome_idx = pysam.FastaFile(self.genome_file)
         self.parser = open(self.coord_file,'r')
+        if self.skip_first==True:
+            self.parser.readline()
 
     def close(self):
         self.parser.close()
@@ -89,8 +92,7 @@ class BedReader(Reader):
 
         for i in range(num_examples):
             line= self.parser.readline().strip().split()
-
-            contig,start_str,end_str,name = line[:4]
+            contig,start_str,end_str = line[:3]
             contig = str(contig)
             start = int(start_str)
             end= int(end_str)
@@ -100,7 +102,7 @@ class BedReader(Reader):
                 #Check specified seq_len
                 if (end-start)==self.seq_len:
                     nuc_list.append(self.genome_idx.fetch(contig,start,end))
-                    rec_id = [name,'\t',contig,':',start_str,'-',end_str]
+                    rec_id = [contig,':',start_str,'-',end_str]
                     rec_ids.append(''.join(rec_id))
                 else:
                     print "Record",(contig,start,end),"does not have seq_len",self.seq_len
@@ -157,8 +159,9 @@ class FastaReader(Reader):
         for i in range(num_examples):
             try:
                 seq_obj = self.parser.next()
-                nuc_seq = seq_obj.seq
+                nuc_seq = str(seq_obj.seq)
                 rec_id = seq_obj.id
+
             except StopIteration:
                 print "Failure in FastaReader pull at", self.index
             if len(nuc_seq) == self.seq_len:
@@ -170,6 +173,7 @@ class FastaReader(Reader):
                       str(len(nuc_seq)), "does not match",str(self.seq_len) )
                 
             self.index +=1
+
         return nuc_list,rec_ids
 
 
@@ -177,6 +181,9 @@ class DinucShuffleReader(Reader):
     """
     Dinucleotide shuffles the entries of a list of readers
     Takes another reader object as sole input
+
+    Note: every pull will perform a unique shuffling operation.
+    To cache pulls, save the output of this reader as a Fasta file
     """
 
     def __init__(self,reader_list):
@@ -191,7 +198,15 @@ class DinucShuffleReader(Reader):
         self.seq_len = self.reader_list[0].seq_len
         self.name = "dinuc_shuffled"
         
-
+    def save_as_fasta(self,output_file):
+        print "Saving dinucleotide shuffled entries in file",output_file
+        self.reader_index=0
+        with open(output_file,'w') as of:
+            for i in range(self.num_records):
+                dinuc_list,rec_ids = self.pull(1)
+                of.write(">{}\n".format(rec_ids[0]))
+                of.write(dinuc_list[0]+"\n")
+        self.reader_index=0
         
     def pull(self,batch_size):
         cur_reader = self.reader_list[self.reader_index]

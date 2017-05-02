@@ -620,9 +620,15 @@ def chr_sizes_dict(chrom_sizes_file):
                 chrom_size_dict[pl[0]]=int(pl[1])
     return chrom_size_dict
 
-def check_bed_bounds(bed_file,chr_sizes_dict,up_pad=0,down_pad=0,min_bound=0):
+def check_bed_bounds(bed_file,
+                     chr_sizes_dict,
+                     up_pad=0,
+                     down_pad=0,
+                     min_bound=0,
+                     skip_first_line=True):
     """
-    Check the bounds of every coordinate within a bed file
+    Check the bounds of every coordinate within a bed file to make sure
+    no values exceed the chromosome size
 
     Args:
     	bed_file: A '.bed' file
@@ -638,6 +644,10 @@ def check_bed_bounds(bed_file,chr_sizes_dict,up_pad=0,down_pad=0,min_bound=0):
     """
     with open(bed_file,'r') as bf:
         num_valid_entries = 0
+
+        if skip_first_line:
+            bf.readline()
+  
         for line in bf:
             if line.startswith('#') or line.startswith('>'):
                 pass
@@ -645,8 +655,8 @@ def check_bed_bounds(bed_file,chr_sizes_dict,up_pad=0,down_pad=0,min_bound=0):
             
                 bl = line.rstrip().split('\t')
                 contig = bl[0]
-                start = int(bl[1])+up_pad
-                end = int(bl[2])+down_pad
+                start = int(bl[1])+int(up_pad)
+                end = int(bl[2])+int(down_pad)
                 max_bound = chr_sizes_dict[contig]
                 if start<min_bound or end>max_bound:
                     print 'Invalid entry detected',(contig,start,end)

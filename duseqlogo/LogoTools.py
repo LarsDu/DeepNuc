@@ -247,7 +247,7 @@ class LogoNucSheet(LogoSheet):
        
 
     
-class BaseLogo():
+class BaseLogo(object):
 
     #These are cairo glyph indices for specific letters
     BIT_SCALE = 50 #Where to draw the x-axis tick
@@ -259,9 +259,6 @@ class BaseLogo():
     glyph_dict = { 'A':A_IND,'T':T_IND,'G':G_IND,'C':C_IND}
 
     NUC_FREQ = 0.25
-
-    def __init__():
-        return None
 
     def draw_label(self,label):
         label_x=self.x+self.width-80
@@ -345,8 +342,16 @@ class BaseLogo():
                 
 class HeightLogo(BaseLogo):
     '''
+    This is similar to SeqLogo only the values within the input logo matrix are treated as
+    raw letter height values.
+
     This class treates a 4xn numpy matrix as a map of letter heights with the rows
-    corresponding to 'A','T','G', and 'C'.  
+    corresponding to TCAG.
+
+    
+
+    Letters are sorted by rank, with top ranked letter placed on top
+    All four letters are drawn
     '''
     
     def __init__(self,logo_matrix,ytick=10):
@@ -476,20 +481,84 @@ class HeightLogo(BaseLogo):
                     cur_let.move(xpos,dy_neg)
                     self.context.scale(1,1)
                     cur_let.draw()
-                else:
-                    pass
                     
 
         self.context.restore()
 
     
    
+class SimpleHeightLogo(HeightLogo):
+    '''
+    Similar to height logo, except this class
+    takes a nucleotide string, and a 1D array of heights
+    and scales each letter to its corresponding height.
+
+    Only one letter is drawn per position
+    
+    '''
+
+    def __init__(self,logo_matrix,nuc_seq,ytick=10):
+        self.nuc_seq = list(nuc_seq)
+        self.col_heights = np.sum(logo_matrix,axis=0)
         
+        super(SimpleHeightLogo, self).__init__(logo_matrix,ytick)
+        if self.col_heights.shape[0] != len(self.nuc_seq):
+            print "SimpleHeightLogo init error dims do not match"
+            print "logo_matrix.shape[1]:{}\tlength of nuc_seq:{}".\
+                                             format(logo_matrix.shape[1],len(self.nuc_seq))
+
+       
+    def draw(self):
+        #SimpleHeightLogo
+        if self.has_neg_values:
+            self.draw_neg_axes()
+        else:
+            self.draw_axes()
+        self.context.save()
+        '''
+        #Get ranks of each column.
+        #Biggest value gets highest rank number and get drawn first
+        filter_ranks = self.logo_matrix.argsort(axis=0)
+        nucs = self.logo_matrix.shape[1]
+        letters = self.logo_matrix.shape[0] #T,C,A,G
+        '''
+        row_dict = {0:'T',1:'C',2:'A',3:'G'}
+        
+        #i is nucleotide index, j is letter index
+        for i,nuc in enumerate(self.nuc_seq):
+            x_start_spacer = 4
+            #Note:x_axis pad just adds some space between x=0 and the first
+            
+            xpos = self.bp_width*i+self.x_offset+self.x_axis_pad
+            #ranks = np.ndarray.tolist(filter_ranks[:,i])
+            dy_pos = self.x_axis_line
+            dy_neg = self.x_axis_line
+
+            cur_let = NucLetter(self.context,
+                                nuc,
+                                xpos,
+                                0,
+                                self.col_heights[i],
+                                0)
+            if cur_let.signed_height>0: #If positive weight
+                cur_let.move(xpos,dy_pos)
+                dy_pos = dy_pos-cur_let.signed_height
+                self.context.scale(1,1)
+                cur_let.draw()
+            elif cur_let.signed_height<0: #If negative weight
+                dy_neg = dy_neg-cur_let.signed_height
+                cur_let.move(xpos,dy_neg)
+                self.context.scale(1,1)
+                cur_let.draw()
+                    
+        self.context.restore()
+
          
         
 class SeqImg(BaseLogo):
     '''
     A class for drawing an image of a nucleotide sequence
+    No height transformations. Just a simple sequence
     '''
 
     def __init__(self,nuc_onehot_matrix,font_size=10):
@@ -539,6 +608,8 @@ class SeqImg(BaseLogo):
         self.context.restore()
 
 
+
+        
 class SeqLogo(BaseLogo):
 
     def __init__(self,np_pfm):
@@ -629,6 +700,8 @@ class SeqLogo(BaseLogo):
         
         return logo_heights
 
+
+    
     
     def draw_pwm(self):
         self.draw_axes()

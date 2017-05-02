@@ -3,7 +3,8 @@ from LogoTools import SeqLogo
 from LogoTools import PwmTools
 from LogoTools import LogoSheet
 from LogoTools import LogoNucSheet
-
+from LogoTools import HeightLogo
+from LogoTools import SimpleHeightLogo
 import numpy as np
 
 
@@ -54,6 +55,14 @@ ppm4=np.array([[ 239.,  250.,  244.,  253.,  240.,  262.,  255.,  251.,  244.,  
 pfm2 = ppm2*1000
 pfm3 = ppm3*1000
 
+hlogo_test = HeightLogo(ppm3)
+hlogo_test.draw()
+hlogo_test.write_to_png('hlogo_test.png')
+
+shlogo = SimpleHeightLogo(ppm3,'ATACGTAC')
+shlogo.draw()
+shlogo.write_to_png('shlogo_test.png')
+'''
 print pfm1.argsort(axis=0)
 mylogo = SeqLogo(pfm3)
 mylogo.print_ic()
@@ -80,3 +89,5 @@ nuc_under_sheet.write_to_png('nuc_under_test1.png')
 pwm_sheet.write_to_png('test_refactor.png')
 #height_sheet.write_to_svg('test_refactor.svg')
 #pwm_sheet.write_to_pdf('test_refactor.pdf')
+'''
+

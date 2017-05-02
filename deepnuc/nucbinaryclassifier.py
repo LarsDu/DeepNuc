@@ -2,16 +2,9 @@ import tensorflow as tf
 import numpy as np
 import sklearn.metrics as metrics
 
-
-
 #from databatcher import DataBatcher
 import nucconvmodel
 #import dubiotools as dbt
-
-
-
-
-
 
 import matplotlib
 matplotlib.use('TkAgg')
@@ -26,9 +19,9 @@ import sys
 #Logging imports
 from logger import Logger
 
-
-
 from nucinference import NucInference
+
+from collections import OrderedDict
 
 class NucBinaryClassifier(NucInference):
 
@@ -48,42 +41,29 @@ class NucBinaryClassifier(NucInference):
                  concat_revcom_input=False,
                  pos_index=1):
 
-        
-        self.sess = sess
-        self.train_batcher = train_batcher
-        self.test_batcher = test_batcher
+
+        super(NucBinaryClassifier, self).__init__(sess,
+                                    train_batcher,
+                                    test_batcher,
+                                    num_epochs,
+                                    learning_rate,
+                                    batch_size,
+                                    seq_len,
+                                    save_dir,
+                                    keep_prob,
+                                    beta1,
+                                    concat_revcom_input)
+
 
         if self.train_batcher.num_classes != 2 or self.test_batcher.num_classes !=2:
             print "Error, more than two classes detected in batchers"
         else:
             self.num_classes = 2
-        self.seq_len = self.train_batcher.seq_len
-        self.num_epochs = num_epochs
-        self.learning_rate = learning_rate
-        self.batch_size = batch_size
-        self.seq_len = seq_len
-        self.save_dir = save_dir
-        self.summary_dir = self.save_dir+os.sep+'summaries'
-        self.checkpoint_dir = self.save_dir+os.sep+'checkpoints'
-
-        #One minus the dropout_probability if dropout is enabled for a particular model
-        self.keep_prob = 0.5
-        #beta1 is a parameter for the AdamOptimizer
-        self.beta1 = beta1
-
-        #This flag will tell the inference method to concatenate
-        #the reverse complemented version of the input sequence
-        #to the input vector
-        self.concat_revcom_input = concat_revcom_input
-                
-        self.train_steps_per_epoch = int(self.train_batcher.num_records//self.batch_size)
-        self.test_steps_per_epoch = int(self.test_batcher.num_records//self.batch_size)
-        self.total_iterations = int(self.train_steps_per_epoch*self.num_epochs)
 
         #The index for the label that should be considered the positive class
         self.pos_index=pos_index
+        self.save_on_epoch = 5
 
-            
 
     def build_model(self,nn_method):
 
@@ -111,11 +91,6 @@ class NucBinaryClassifier(NucInference):
                                                                    logits=self.logits))
 
         
-    
-        # Add gradient ops to graph with learning rate
-        self.train_op = tf.train.AdamOptimizer(self.learning_rate,beta1=self.beta1).\
-                                                         minimize(self.loss)
-
         '''
         Calculate metrics. num_true positives is the number of true positives for the current batch
 
@@ -168,15 +143,15 @@ class NucBinaryClassifier(NucInference):
         self.false_negatives=tf.less(self.logits_ind,self.labels_ind)
         self.num_false_negatives = tf.reduce_sum(tf.cast(self.false_negatives,tf.int32))
 
-        #num correct is also equal to TP+TN and can be used to calculate accuracy
+        #num correct can be used to calculate accuracy
         self.correct = tf.equal(self.logits_ind,self.labels_ind)
         self.num_correct= tf.reduce_sum(tf.cast(self.correct, tf.int32))
                 
                
         self.relevance =self.network.relevance_backprop(tf.multiply(self.logits,
                                                                self.labels_placeholder))
-
-
+    
+        
         '''Write and consolidate summaries'''
         self.loss_summary = tf.summary.scalar('loss',self.loss)
 
@@ -196,55 +171,27 @@ class NucBinaryClassifier(NucInference):
         #Note: Do not use tf.summary.merge_all() here. This will break encapsulation for
         # cross validation and lead to crashes when training multiple models
         
-        tf.global_variables_initializer().run() 
-
-        if self.load(self.checkpoint_dir):
-            print "Successfully loaded from checkpoint",self.checkpoint_dir
-
-        
-
-
-
-
+            
     
-    def eval_model_accuracy(self,batcher,eval_batch_size=50):
-        """ Evaluate the accuracy of the classification model"""
+
+            
         
-        num_correct = 0 #counts number of correct predictions
-        batcher_steps_per_epoch =  batcher.num_records//eval_batch_size
-        left_over_steps = batcher.num_records%eval_batch_size
-        num_steps = batcher_steps_per_epoch+left_over_steps
-        for i in range(num_steps):
-            if i >= batcher_steps_per_epoch-1:
-                batch_size=1
-            else:
-                batch_size=eval_batch_size
+        # Add gradient ops to graph with learning rate
+        self.train_op = tf.train.AdamOptimizer(self.learning_rate,
+                                               beta1=self.beta1).minimize(self.loss,
+                                                                   global_step=self.global_step)
 
-            labels_batch,dna_seq_batch = batcher.pull_batch(batch_size)
-            feed_dict = {
-                          self.dna_seq_placeholder:dna_seq_batch,
-                          self.labels_placeholder:labels_batch,
-                          self.keep_prob_placeholder:1.0
-                        }
-            ncorr,cur_prob = self.sess.run([self.num_correct,self.probs],
-                                                  feed_dict=feed_dict)
-            num_correct += ncorr
+        self.load(self.checkpoint_dir)
 
-        accuracy = num_correct/float(batcher.num_records)
-        print 'Num examples: %d  Num correct: %d  Accuracy: %0.04f' % \
-                  (batcher.num_records, num_correct, accuracy)+'\n'
-        return accuracy
-            
-
-
-            
+        tf.global_variables_initializer().run()
+        
 
     def eval_model_metrics(self,
                            batcher,
                            show_plots=False,
                            save_plots=False,
                            image_name ='metrics.png',
-                           eval_batch_size=50,):
+                           eval_batch_size=50):
 
         """
         Note: This method only works for binary classification 
@@ -264,16 +211,15 @@ class NucBinaryClassifier(NucInference):
         all_labels = np.zeros((batcher.num_records,self.num_classes), dtype = np.float32)
         all_probs = np.zeros((batcher.num_records,self.num_classes), dtype = np.float32)
        
-        num_correct = 0 #counts number of correct predictions
-        batcher_steps_per_epoch =  batcher.num_records//eval_batch_size
-        left_over_steps = batcher.num_records%eval_batch_size
-        num_steps = batcher_steps_per_epoch+left_over_steps
-
+        #num_correct = 0 #counts number of correct predictions
+        num_whole_pulls =  batcher.num_records//eval_batch_size
+        num_single_pulls = batcher.num_records%eval_batch_size
+        num_steps = num_whole_pulls+num_single_pulls
         for i in range(num_steps):
-            if i >= batcher_steps_per_epoch-1:
-                batch_size=1
-            else:
+            if i<num_whole_pulls:
                 batch_size=eval_batch_size
+            else:
+                batch_size=1
 
             labels_batch, dna_seq_batch = batcher.pull_batch(batch_size)
             feed_dict = {
@@ -283,22 +229,35 @@ class NucBinaryClassifier(NucInference):
                         }
 
                 
-            ncorr,cur_prob= self.sess.run([self.num_correct,self.probs],feed_dict=feed_dict)
-            num_correct += ncorr
+            cur_prob= self.sess.run(self.probs,feed_dict=feed_dict)
             
+            
+                        
             #Fill labels array
-            all_labels[i:i+batch_size,:] =  labels_batch[0]
-            all_probs[i:i+batch_size,:]  = cur_prob[0]
+            if batch_size > 1:
+                start_ind = batch_size*i
+            elif batch_size == 1:
+                start_ind = num_whole_pulls*eval_batch_size+(i-num_whole_pulls)
+            else:
+                print "Never reach this condition"
 
 
+            all_labels[start_ind:start_ind+batch_size,:] =  labels_batch
+            all_probs[start_ind:start_ind+batch_size,:]  = cur_prob
+
+
+
+
+        
         #Calculate metrics and save results in a dict
-        md = self.calculate_classifier_metrics(all_labels,all_probs)
-                    
-        accuracy = float(num_correct)/batcher.num_records
-        md["num_correct"] = num_correct
-        md["accuracy"] = accuracy
+        md = self.calc_classifier_metrics(all_labels,all_probs)
+        md["epoch"]=self.epoch
+        md["step"]=self.step        
+
+        #print "Testing accuracy",float(num_correct)/float(batcher.num_records)
+        
         print 'Num examples: %d  Num correct: %d  Accuracy: %0.04f' % \
-                  (batcher.num_records, num_correct, accuracy)+'\n'
+                  (batcher.num_records, md["num_correct"], md["accuracy"])+'\n'
 
       
 
@@ -356,7 +315,7 @@ class NucBinaryClassifier(NucInference):
 
 
     
-    def calculate_classifier_metrics(self,all_labels,all_probs):
+    def calc_classifier_metrics(self,all_labels,all_probs):
         """Calculate some metrics for the dataset
            return dictionary with metrics
 
@@ -371,6 +330,11 @@ class NucBinaryClassifier(NucInference):
         all_preds[np.arange(num_records),all_probs.argmax(1)] = 1
 
 
+        #Calculate accuracy
+        num_correct = metrics.accuracy_score(all_labels[:,self.pos_index],all_preds[:,self.pos_index],normalize=False)
+        accuracy = num_correct/float(all_preds.shape[0])
+       
+        
         ###Calculate auROC
         #http://scikit-learn.org/stable/auto_examples/model_selection/plot_roc.html
         #metrics.roc_curve(y_true, y_score[, ...]) #y_score is probs
@@ -399,41 +363,21 @@ class NucBinaryClassifier(NucInference):
         auprc = metrics.average_precision_score(all_labels[:,self.pos_index],
                                                 all_probs[:,self.pos_index])
         
-        return {
-                "auroc":auroc,
-                "auprc":auprc,
-                "fpr":fpr,
-                "tpr":tpr,
-                "precision":precision,
-                "recall":recall,
-                "f1_score":f1_score,
-                "support":support,
-                "thresh_precision":thresh_precision,
-                "thresh_recall":thresh_recall,
-                "prc_thresholds":prc_thresholds
-                 }
-
-
-
-            
-    def save(self,checkpoint_dir,step):
-        if not os.path.exists(checkpoint_dir):
-            os.makedirs(checkpoint_dir)
-        checkpoint_name = checkpoint_dir+os.sep+'checkpoints'
-        self.saver.save(self.sess,
-                        checkpoint_name,
-                        global_step = step)
-
-    def load(self,checkpoint_dir):
-        print(" Retrieving checkpoints from", checkpoint_dir)
-        ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
-        if ckpt and ckpt.model_checkpoint_path:
-            self.saver.restore(self.sess, ckpt.model_checkpoint_path)
-            print ("Successfully loaded checkpoint from",checkpoint_dir)
-            return True
-        else:
-            print ("Failed to load checkpoint",checkpoint_dir)
-            return False
+        return OrderedDict([
+                ("num_correct",num_correct),
+                ("accuracy",accuracy), 
+                ("auroc",auroc),
+                ("auprc",auprc),
+                ("fpr",fpr),
+                ("tpr",tpr),
+                ("precision",precision),
+                ("recall",recall),
+                ("f1_score",f1_score),
+                ("support",support),
+                ("thresh_precision",thresh_precision),
+                ("thresh_recall",thresh_recall),
+                ("prc_thresholds",prc_thresholds)
+                 ])
 
 
     

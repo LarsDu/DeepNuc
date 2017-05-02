@@ -59,9 +59,9 @@ def main(argv):
     else:
         output_fname = FLAGS.output_fname
         
-    converter = Converter(dinuc_reader+reader_list,
-                          output_fname = output_fname,
-                          labels=None)
+    converter = ConvertToHdf5(dinuc_reader+reader_list,
+                          output_fname = output_fname)
+                          
 
 
 if __name__=='__main__':

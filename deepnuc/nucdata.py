@@ -4,7 +4,8 @@ import h5py
 from abc import ABCMeta, abstractmethod,abstractproperty
 import nucnibble
 import dubiotools as dbt
-
+#import pysam
+from readers import * #Bed,Fasta,DinucShuffleReader
 
 
 class BaseNucData():
@@ -40,12 +41,20 @@ class BaseNucData():
         return new_value
     '''
 
-class NucDataRegression(BaseNucData):
+class NucDataRegressMem(BaseNucData):
 
+    '''Just load nucleotide sequences and labels into two equally
+       sized lists.
+       Labels are quantitative rather than onehot
+       This class was originall written to work with DREAM5 data
+    '''
+    
     def __init__(self):
         self.nuc_seqs = []
         self.labels = []
         self.num_classes=1
+        self.num_records = None
+        self.seq_len = None
 
     def add_seq_labels(self,seq_str,label):
         """Add sequences and labels for regression 
@@ -57,27 +66,68 @@ class NucDataRegression(BaseNucData):
         self.nuc_seqs.append(str(seq_str))
         self.labels.append(float(label))
 
-  
-        
-    
-class NucMemoryRegression(NucDataRegression):
-    '''Just load nucleotide sequences and labels into two equally
-       sized lists.
-       Labels are quantitative rather than onehot
-       This class was originall written to work with DREAM5 data
-    '''
 
-    def __init__():
-        super(NucDataRegression, self).__init__()
-    
+    def get_label_mean_std(self):
+        """Used to calculate mean and standard deviation
+         Necessary for y feature normalization for regression"""
+        if self.num_records == None or self.seq_len == None:
+            return None
         
+        all_labels = np.zeros((self.num_records))
+        for i in range(self.num_records):
+            label,_ = self.pull_index_onehot(i)
+            all_labels[i] = label
+
+        mean = np.mean(all_labels)
+        std = np.std(all_labels)
+        return mean,std    
+
+    def split_indices_by_threshold(self,threshold):
+        """
+        Return indices of items with less than or equal to and
+        greater than threshold
+        """
+        lower_indices = []
+        higher_indices = []
+        for i in range(self.num_records):
+            label,_ = self.pull_index_onehot(i)
+            if label>threshold:
+                higher_indices.append(i)
+            else:
+                lower_indices.append(i)
+        return lower_indices,higher_indices
+
+
     def calc_properties(self):
         self.seq_len = len(self.nuc_seqs[0])
         self.num_records = len(self.labels)
+        self.get_label_mean_std()
         assert self.num_records == len(self.nuc_seqs),\
             "Lens of labels list and nuc_seqs list not equal"
         
 
+
+    def discard_indices_except(self,indices):
+        """
+        Keep every item with indices passed by user.
+        Discard everything else
+
+        """
+        new_nuc_seqs = []
+        new_labels = []
+        #indices.sort() #hmm this breaks encapsulation...
+        indices = sorted(indices)
+        for i in indices:
+            new_nuc_seqs.append(self.nuc_seqs[i])
+            new_labels.append(self.labels[i])
+        self.nuc_seqs = new_nuc_seqs
+        self.labels = new_labels
+        self.num_records = len(self.nuc_seqs)
+            
+        
+    def set_classification_threshold(self,threshold):
+        self.threshold = threshold
+        
     def pull_index_nucs(self,index):
         return self.labels[index],self.nuc_seqs[index]
 
@@ -87,10 +137,103 @@ class NucMemoryRegression(NucDataRegression):
     
     def close(self):
         """ Dummy method for compatibility with NucHdf5"""
+
+        
+    
+
+        
+        
                      
+class NucDataBedMem(BaseNucData):
+    """
+    
+    Pull nucleotide sequence from bed file by index
+    This is largely a wrapper for BedReader
+    Given a bed file, genome fasta file, and chromsome sizes file
+    
+    
+    Optional: Generate a dinucleotide shuffled version of the input bed file
+              and save as a fasta file
+    Optional: Pass two fasta files. One is 
+    Note:
+    Nucleotide information and labels are stored in two lists.
+    All nucleotide data is stored in memory.
+    Nucleotide data is stored as a string (not as a nibble array).
+    
+    """
+                
+    def __init__(self,
+                 bed_file,
+                 genome_file,
+                 chr_sizes_file,
+                 seq_len,
+                 skip_first=True,
+                 gen_dinuc_shuffle=True,
+                 neg_fasta_file=None):
+
+        """
+
+        If neg_fasta_file is specified, no dinucleotide shuffled fasta file will be generated
+        regardless of whether gen_dinuc_shuffle flag is set to True.
+                 
+        """
+        self.seq_len = seq_len
+        self.pos_reader = BedReader(bed_file,genome_file,chr_sizes_file,seq_len,skip_first=True)
+        self.pos_reader.open()
+        #For now, this object must be used with binary classifiers
+        self.num_classes =2 
         
         
+        if neg_fasta_file:
+            self.neg_reader = FastaReader(neg_fasta_file,self.seq_len)
+            self.neg_reader.open()
+        elif gen_dinuc_shuffle:
+            output_fname = os.path.splitext(self.pos_reader.name)[0]+'_dinuc_shuffle.fa'
+            if not os.path.exists(output_fname):
+                #Dinuc entries from pos_reader and save to fasta file with
+                # name output_fname
+                dinuc_shuffler = DinucShuffleReader([self.pos_reader])
+                dinuc_shuffler.open()
+                dinuc_shuffler.save_as_fasta(output_fname)
+                dinuc_shuffler.close()
+            else:
+                print "{0} already found. Will use {0} as dinucleotide shuffled dataset".\
+                                                                    format(output_fname)
+            self.neg_reader = FastaReader(output_fname,self.seq_len)
+            self.neg_reader.open()
+
+            
+        #Create fasta file to record entries in DinucShuffleReader
+            
+        self.num_records = self.pos_reader.num_records + self.neg_reader.num_records
         
+        #Read all sequences into memory
+            
+        all_pulls = [self.pos_reader.pull(1) for _ in range(self.pos_reader.num_records)]+\
+                    [self.neg_reader.pull(1) for _ in range(self.neg_reader.num_records)]
+
+        
+        self.nuc_seqs = [i[0] for i in zip(*all_pulls)[0]]
+    
+        self.labels = [1]*self.pos_reader.num_records + [0]*self.neg_reader.num_records
+        
+        #print self.nuc_seqs[0]
+        #print self.nuc_seqs[2]
+        self.pos_reader.close()
+        self.neg_reader.close()
+
+        
+    def pull_index_nucs(self,index):
+        return self.labels[index],self.nuc_seqs[index]
+
+    def pull_index_onehot(self,index):
+        return self.labels[index],dbt.seq_to_onehot(self.nuc_seqs[index])
+
+    
+    def close(self):
+        self.bed_reader.close()
+
+                
 class NucFastaMemory(BaseNucData):
     """ Load a set of fasta files into memory. Labels should be of type
         classification """

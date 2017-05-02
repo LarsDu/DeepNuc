@@ -20,7 +20,7 @@ class Logger(object):
         self.terminal = sys.stdout
 
 
-        self.base_dir = os.path.splitext(log_file)[0]
+        self.base_dir = os.path.split(log_file)[0]
         try:
             os.makedirs(self.base_dir)
         except OSError:

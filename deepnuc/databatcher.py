@@ -42,8 +42,8 @@ class DataBatcher:
          Necessary for y feature normalization for regression"""
 
         all_labels = np.zeros((self.num_records))
-        for i in range(self.num_records):
-            label,_ = self.nuc_data.pull_index_onehot(i)
+        for i,ind in enumerate(self.indices):
+            label,_ = self.nuc_data.pull_index_onehot(ind)
             all_labels[i] = label
 
         mean = np.mean(all_labels)
@@ -98,8 +98,9 @@ class DataBatcher:
 
 
     def numeric_to_onehot_label(self,numeric_label):
+        
         onehot = np.zeros(self.num_classes,dtype = np.float32)
-        onehot[numeric_label] = 1
+        onehot[int(numeric_label)] = 1
         return onehot
     
     def pull_batch(self,batch_size):

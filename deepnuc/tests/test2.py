@@ -16,22 +16,21 @@ from crossvalidator import CrossValidator
 
 
 def main():
-    params = ModelParams( training_file=None,
-                          testing_file=None,
+    params = ModelParams(
+                          seq_len=600,
                           num_epochs=35,
                           learning_rate=1e-4,
                           batch_size=24,
-                          seq_len=600,
                           keep_prob=0.5,
                           beta1=0.9 )
-    cv_k_folds = 3
-    cv_test_frac = 0.15
+    #cv_k_folds = 3
+    #cv_test_frac = 0.15
         
-    #test_classifier(params,"train")
+    ##test_classifier(params,"train")
 
-    test_classifier(params,"relevance")
+    #test_classifier(params,"relevance")
 
-    #test_cross_validation(params)
+    test_cross_validation(params)
     
     #test_mutation_map()
 
@@ -40,7 +39,7 @@ def main():
 
 def test_classifier(params,mode="train"):
 
-    save_dir = "example_data/april_lab_meeting"
+    save_dir = "example_data/may_lab_meeting"
     sys.stdout = Logger(save_dir+os.sep+mode+".log")
     print "Test classifier"
 
@@ -80,17 +79,17 @@ def test_classifier(params,mode="train"):
                                 keep_prob,
                                 params.beta1)
 
-        nc_test.build_model(nucconvmodel.inferenceA)
+        #nc_test.build_model(params.inference_model)
 
         if mode == 'train':
             nc_test.train()
         elif mode == 'relevance':
             all_batcher = DataBatcher(nuc_data,range(nuc_data.num_records))
-            nc_test.relevance_batch_by_index(all_batcher,5004)
-            nc_test.relevance_batch_by_index(all_batcher,5007)
-            nc_test.relevance_batch_by_index(all_batcher,5009)
-
-            nc_test.eval_train_test()
+            #nc_test.relevance_batch_by_index(all_batcher,5004)
+            #nc_test.relevance_batch_by_index(all_batcher,5007)
+            #nc_test.relevance_batch_by_index(all_batcher,5009)
+            nc_test.relevance_batch_by_index(all_batcher,8000)
+            #nc_test.eval_train_test()
 
 
 
@@ -116,19 +115,19 @@ def test_cross_validation(params):
     #print nuc_data.pull_index_onehot(5)[1].shape
 
 
-    with tf.Session() as sess:
-        cv = CrossValidator( sess,
-                             NucBinaryClassifier,
-                        params,
+   
+    cv = CrossValidator( 
+                        params, 
                         nuc_data,
                         cv_save_dir,
                         seed=seed,
                         nn_method=nucconvmodel.inferenceA,
                         k_folds=3,
                         test_frac=0.15)
-
+    cv.run()
     
-
+    cv.calc_avg_k_metrics()
+    
 def test_mutation_map():
     pass
 

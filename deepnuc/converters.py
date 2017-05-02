@@ -86,7 +86,7 @@ class ConvertToHdf5:
                 for row in range (reader.num_records):
                     if row%2000==0:
                         print "Wrote",row,"entries to",self.output_fname
-                    nuc_seqs,rec_ids = reader.pull(1) #Outputs are lists 
+                    nuc_seqs,rec_ids = reader.pull(1) #Outputs are lists
                     np_nibble_seq =  nucnibble.nuc_to_uint8_numpy(nuc_seqs[0]) 
                     dset[offset+row,0] = lbli #First element in row is the numeric label
                     dset[offset+row,1:] = np_nibble_seq #Following elements are nibble coded nuc seq

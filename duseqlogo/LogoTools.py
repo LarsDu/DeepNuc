@@ -18,6 +18,8 @@ import deepnuc.dubiotools as dbt
 
 
 
+
+
 class LogoSheet:
     '''
     A sheet object for drawing multiple SeqLogos.
@@ -141,7 +143,55 @@ class LogoSheet:
 
     
 
+class SimpleHeightLogoSheet:
+    def __init__(self,heights,nuc_seqs):
 
+        if len(logo_mats) != len(nuc_seqs):
+            print "Error! Number of logo_mats must match number of nuc_seq!"
+            return None
+
+        self.heights = heights
+        self.nuc_seqs = nuc_seqs
+        ##Specific to SimpleHeightLogoSheet
+        self.nuc_height = 20
+
+        #Number of pixels between logo and nuc sequence
+        self.nuc_spacer = 10
+        
+        #Number of pixels between drawn logos
+        self.bottom_spacer = 30
+            
+        #Pixel dimensions of sheet
+        self.width = self.logo_list[0].width + 10
+        self.height = ((self.logo_list[0].height+self.bottom_spacer)*self.num_logos)
+        
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32,self.width,self.height)
+        self.context = cairo.Context(self.surface)
+
+        self.simple_heights_list = [SimpleHeightLogo(height,seq) for \
+                                     height,seq in zip(self.heights,self.nuc_seqs) ]
+        self.draw_simple_heights()
+
+
+    def draw_simple_heights(self):
+        #SimpleHeightLogoSheet
+        for i,simp in enumerate(self.simple_heights_list):
+            #Draw item
+            simp.draw()
+            #set x,y position of logo (y increases from top to down
+            total_height = (simp.height+
+                           self.nuc_spacer+
+                           self.nuc_height+
+                           self.bottom_spacer)
+                
+            self.context.set_source_surface(simp.surface,0,total_height*i)
+            #if self.do_draw_label:
+            #    logo.draw_label(''+' '+str(i))
+            self.context.paint()
+                
+
+
+    
 class LogoNucSheet(LogoSheet):
     """
     Displays a LogoSheet with a user specified nucleotide sequence below
@@ -497,15 +547,15 @@ class SimpleHeightLogo(HeightLogo):
     
     '''
 
-    def __init__(self,logo_matrix,nuc_seq,ytick=10):
+    def __init__(self,heights,nuc_seq,ytick=10):
         self.nuc_seq = list(nuc_seq)
-        self.col_heights = np.sum(logo_matrix,axis=0)
+        self.col_heights = np.sum(heights,axis=0)
         
-        super(SimpleHeightLogo, self).__init__(logo_matrix,ytick)
+        super(SimpleHeightLogo, self).__init__(heights,ytick)
         if self.col_heights.shape[0] != len(self.nuc_seq):
             print "SimpleHeightLogo init error dims do not match"
-            print "logo_matrix.shape[1]:{}\tlength of nuc_seq:{}".\
-                                             format(logo_matrix.shape[1],len(self.nuc_seq))
+            print "heights.shape[1]:{}\tlength of nuc_seq:{}".\
+                                             format(heights.shape[1],len(self.nuc_seq))
 
        
     def draw(self):
@@ -515,13 +565,9 @@ class SimpleHeightLogo(HeightLogo):
         else:
             self.draw_axes()
         self.context.save()
-        '''
-        #Get ranks of each column.
-        #Biggest value gets highest rank number and get drawn first
-        filter_ranks = self.logo_matrix.argsort(axis=0)
-        nucs = self.logo_matrix.shape[1]
-        letters = self.logo_matrix.shape[0] #T,C,A,G
-        '''
+
+        
+
         row_dict = {0:'T',1:'C',2:'A',3:'G'}
         
         #i is nucleotide index, j is letter index

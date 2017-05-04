@@ -19,6 +19,7 @@ sys.path.append(
 from duseqlogo import LogoTools
 import nucheatmap
 
+import nucconvmodel
 from collections import OrderedDict
 
 import pickle
@@ -50,15 +51,18 @@ class NucInference(object):
                  save_dir,
                  keep_prob,
                  beta1,
-                 concat_revcom_input):
+                 concat_revcom_input,
+                 nn_method_key):
 
         self.sess = sess
         self.train_batcher = train_batcher
         self.test_batcher = test_batcher
         self.seq_len = self.train_batcher.seq_len
         self.num_epochs = num_epochs
+
         self.learning_rate = learning_rate
         self.batch_size = batch_size
+
         self.seq_len = seq_len
         self.save_dir = save_dir
         self.summary_dir = self.save_dir+os.sep+'summaries'
@@ -73,19 +77,25 @@ class NucInference(object):
         #the reverse complemented version of the input sequence
         #to the input vector
         self.concat_revcom_input = concat_revcom_input
-                
-        self.train_steps_per_epoch = int(self.train_batcher.num_records//self.batch_size)
-        self.test_steps_per_epoch = int(self.test_batcher.num_records//self.batch_size)
-        self.total_iterations = int(self.train_steps_per_epoch*self.num_epochs)
 
+        self.nn_method_key = nn_method_key
+        self.nn_method = nucconvmodel.methods_dict[nn_method_key]
+        
+        self.train_steps_per_epoch = int(self.train_batcher.num_records//self.batch_size)
+        if self.test_batcher:
+            self.test_steps_per_epoch = int(self.test_batcher.num_records//self.batch_size)
+        self.num_steps = int(self.train_steps_per_epoch*self.num_epochs)
+        
 
         self.save_on_epoch = 5 #This will be overrided in child class __init__
+       
         self.train_metrics_vector = [] #a list of metrics recorded on each save_on_epoch
         self.test_metrics_vector =[]
 
         self.epoch = 0
         self.step=0
         #http://stackoverflow.com/questions/43218731/
+        #deprecated DO NOT USE
         self.global_step = tf.Variable(0, trainable=False,name='global_step')
 
 
@@ -96,13 +106,13 @@ class NucInference(object):
 
         #Save checkpoint in tensorflow
         checkpoint_name = self.checkpoint_dir+os.sep+'checkpoints'
-        self.saver.save(self.sess,checkpoint_name,global_step=self.global_step)
+        self.saver.save(self.sess,checkpoint_name,global_step=self.step)
 
         #Save metrics using pickle in the metrics folder
         if not os.path.exists(self.metrics_dir):
             os.makedirs(self.metrics_dir)
 
-        metrics_file = self.metrics_dir+os.sep+'metrics-'+str(self.step+1)+'.p'
+        metrics_file = self.metrics_dir+os.sep+'metrics-'+str(self.step)+'.p'
         with open(metrics_file,'w') as of:
             pickle.dump(self.train_metrics_vector,of)
             pickle.dump(self.test_metrics_vector,of)
@@ -111,22 +121,21 @@ class NucInference(object):
     def load(self,checkpoint_dir):
         '''
         Load saved model from checkpoint directory.
-        self.global_step is defined here
         '''
         print(" Retrieving checkpoints from", checkpoint_dir)
-        print "Note: loading saved models won't restore previous model metrics"
         ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
         
         if ckpt and ckpt.model_checkpoint_path:
-            print ("Successfully loaded checkpoint from",checkpoint_dir)
+            print "\n\n\n\nSuccessfully loaded checkpoint from",ckpt.model_checkpoint_path
+            #Extract step from checkpoint filename
             self.step = int(os.path.basename(ckpt.model_checkpoint_path).split('-')[1])
-            self.epoch = (self.step*self.batch_size)//self.train_batcher.num_records
+            self.epoch = int(self.step/self.train_steps_per_epoch)
             #Load metrics from pickled metrics file
             metrics_file = self.metrics_dir+os.sep+'metrics-'+str(self.step)+'.p'
             with open(metrics_file,'r') as of:
                 print "Reading recorded metrics data from {}".format(metrics_file)
                 self.train_metrics_vector = pickle.load(of)
-                self.train_metrics_batcher = pickle.load(of)
+                self.test_metrics_vector = pickle.load(of)
             return True
         else:
             print ("Failed to load checkpoint",checkpoint_dir)
@@ -150,16 +159,23 @@ class NucInference(object):
         
         
         start_time = time.time()
-    
-        train_results_dict={}
-        test_results_dict={}
-                   
 
+                       
+        #If model already finished training, just return last metrics
+        if self.step >= self.num_steps or self.epoch>self.num_epochs:
+            print "Loaded model already finished training"
+            print "Model was loaded at step {} epoch {} and num_steps set to {} and num epochs set to {}".format(self.step,self.epoch,self.num_steps,self.num_epochs)
+   
+
+            
+        #Important note: epochs go from 1 to num_epochs inclusive. The
+        # last epoch index is equal to num_epochs
         
-        for epoch in xrange(self.num_epochs):
-
-            for step in xrange(self.train_steps_per_epoch):
-
+            
+        for _ in xrange(self.epoch,self.num_epochs):
+            self.epoch += 1 
+            for _ in xrange(self.train_steps_per_epoch):
+                self.step += 1
                 (labels_batch,dna_seq_batch) = self.train_batcher.pull_batch(self.batch_size)
             
                 feed_dict={
@@ -175,7 +191,7 @@ class NucInference(object):
                 duration = time.time() - start_time
                 
                 # Write the summaries and print an overview fairly often.
-                if epoch % 1 == 0 and epoch > 0 and (step % self.train_steps_per_epoch == 0):
+                if (self.step % self.train_steps_per_epoch == 0):
                     # Print status to stdout.
                     print('Epoch %d Step %d loss = %.4f (%.3f sec)' % (self.epoch, self.step,
                                                      loss_value,
@@ -187,9 +203,10 @@ class NucInference(object):
                     self.summary_writer.flush() #ensure summaries written to disk
 
                 #Save checkpoint and evaluate training and test sets                     
-                if ( epoch % self.save_on_epoch == 0
-                     and epoch>0 and (step % self.train_steps_per_epoch == 0)
-                                    and ((step + 1) != self.total_iterations) ):
+                if ( self.epoch % self.save_on_epoch == 0
+                     and self.epoch > 0
+                     and self.epoch !=self.num_epochs
+                     and self.step % self.train_steps_per_epoch == 0):
                     print "Saving checkpoints"
                     self.save()
                     print('Training data eval:')
@@ -202,32 +219,43 @@ class NucInference(object):
                         test_metrics=self.eval_model_metrics(self.test_batcher)
                         self.test_metrics_vector.append(test_metrics)
                         self.print_metrics(test_metrics)
-                if ((step + 1) == self.total_iterations):
-                    # For the last iteration, save metrics
+                if (self.epoch == self.num_epochs and self.step % self.train_steps_per_epoch ==0):
+                    # This is the final step and epoch, save metrics
                     print "Saving final checkpoint"
-                    self.save(self.checkpoint_dir)
+                    self.save()
 
                     # Evaluate the entire training set.
                     print('Training data eval:')
                     #self.eval_model_accuracy(self.train_batcher)
-                    train_results_dict = self.eval_model_metrics(self.train_batcher,
+                    self.train_metrics_vector.append( self.eval_model_metrics(self.train_batcher,
                                                                  show_plots=False,
-                                                                 save_plots=True)
+                                                                 save_plots=True))
 
                     if self.test_batcher != None:
                         print('Testing data eval:')
-                        test_results_dict = self.eval_model_metrics(self.test_batcher,
+                        self.test_metrics_vector.append(self.eval_model_metrics(self.test_batcher,
                                                                     show_plots=False,
-                                                                    save_plots=True)
+                                                                    save_plots=True))
 
-                self.step += 1
-            self.epoch += 1
+
+        #Set return values 
+        ret_metrics = []
+        if self.train_metrics_vector != []:
+            ret_metrics.append(self.train_metrics_vector[-1])
+        else:
+            ret_metrics.append([])
+            
+        if self.test_metrics_vector != []:
+            ret_metrics.append(self.test_metrics_vector[-1])
+        else:
+            ret_metrics.append([])
+      
         
-        return (train_results_dict,test_results_dict)
+        return ret_metrics
 
 
-    def eval_train_test(self,show_plots=False,save_plots=True):
-        # Evaluate the entire training set.
+    def eval_batchers(self,show_plots=False,save_plots=True):
+        # Evaluate training and test batcher data.
         print('Training data eval:')
         #self.eval_model_accuracy(self.train_batcher)
         train_results_dict = self.eval_model_metrics(self.train_batcher,
@@ -242,7 +270,8 @@ class NucInference(object):
                                                         show_plots=show_plots,
                                                         save_plots=save_plots)
         self.print_metrics(test_results_dict)
-    
+
+        
     def print_metrics(self,metrics_dict):
         for key,value in metrics_dict.viewitems():
             #Do not print out arrays!
@@ -263,9 +292,42 @@ class NucInference(object):
 
 
 
+    def plot_test_epoch_vs_metric(self,
+                                  metric_key="auroc",
+                                  suffix = '',
+                                  save_plot=True,
+                                  show_plot=False):
+        format_dict= {"auroc":"auROC","auPRC":"auprc","f1_score":"F1-Score"}
+        num_mets = len(self.test_metrics_vector)
+        if num_mets == 0:
+            print "Test metrics vector is empty!"
+            return None
+        met_y = [m[metric_key] for m in self.test_metrics_vector]
+        ep_x = [m["epoch"] for m in self.test_metrics_vector]
+        
+        fig,ax = plt.subplots(1)
+        ax.plot(ep_x,met_y)
+
+        ax.set_xlabel("Number of epochs")
+        ax.set_xlim(0,ep_x[-1])
+        ax.set_ylim(0,met_y[-1])
+        if metric_key in format_dict:
+            ax.set_title("Epoch vs. {} {}".format(format_dict[metric_key],suffix))
+            ax.set_ylabel("{}".format(format_dict[metric_key]))
+        else:
+            ax.set_title("Epoch vs.{} {}".format(metric_key,suffix))
+            ax.set_ylabel("{}".format(metric_key))
+        if save_plot:
+            plot_file = self.save_dir+os.sep+"epoch_vs_{}_{}.png".format(metric_key,suffix)
+            fig.savefig(plot_file)
+        if show_plot:
+            fig.show()
+    
+
+                          
     def get_optimal_metrics(self,metrics_vector, metric_key="auroc"):
         """
-        Get the epoch value for the 
+        Get the metrics from the epoch where a given metric was at it maximum
         """
         best_val = 0
         for metric in metrics_vector:
@@ -352,7 +414,6 @@ class NucInference(object):
             start_ind = iter_batch_size*i
             all_logits[start_ind:start_ind+iter_batch_size] = cur_logits
 
-
             mutmap_ds=np.zeros_like(onehot_seq)
             k=0
             #Onehot seq mutator created SNPs in order
@@ -429,16 +490,6 @@ class NucInference(object):
         seq = dbt.onehot_to_nuc(dna_seq_batch[0].T)
         print labels_batch
         nucheatmap.nuc_heatmap(seq,r_img,heatmap_im,heatmap_im)
-
-
-
-
-
-
-
-
-
-
         
         #plt.pcolor(r_img,cmap=plt.cm.Reds)
         #plt.show()

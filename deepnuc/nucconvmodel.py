@@ -211,6 +211,12 @@ def inferenceD(dna_seq_placeholder,
 
 
 
+#methods_dict is used by modelparams.py
+methods_dict = {"inferenceA":inferenceA,
+               "inferenceB":inferenceB,
+               "inferenceC":inferenceC,
+               "inferenceD":inferenceD}
+
 
 
 '''

@@ -16,8 +16,11 @@ class DataBatcher:
         self.num_classes = nuc_data.num_classes
         self.seq_len = nuc_data.seq_len
         self.use_onehot_labels = use_onehot_labels
-        
-        self.indices = indices
+
+        if indices == None:
+            self.indices = range(self.nuc_data.num_records)
+        else:
+            self.indices = indices
         self.num_records = len(self.indices)
 
         self.perm_indices = np.random.permutation(self.indices)

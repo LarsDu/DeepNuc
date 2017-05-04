@@ -39,6 +39,7 @@ class NucBinaryClassifier(NucInference):
                  keep_prob=0.5,
                  beta1=0.9,
                  concat_revcom_input=False,
+                 nn_method_key="inferenceA",
                  pos_index=1):
 
 
@@ -52,11 +53,12 @@ class NucBinaryClassifier(NucInference):
                                     save_dir,
                                     keep_prob,
                                     beta1,
-                                    concat_revcom_input)
+                                    concat_revcom_input,
+                                    nn_method_key="inferenceA")
 
 
-        if self.train_batcher.num_classes != 2 or self.test_batcher.num_classes !=2:
-            print "Error, more than two classes detected in batchers"
+        if self.train_batcher.num_classes != 2:
+            print "Error, more than two classes detected in train batcher"
         else:
             self.num_classes = 2
 
@@ -65,9 +67,9 @@ class NucBinaryClassifier(NucInference):
         self.save_on_epoch = 5
 
 
-    def build_model(self,nn_method):
+    def build_model(self):
 
-        self.nn_method = nn_method
+        
         self.dna_seq_placeholder = tf.placeholder(tf.float32,
                                           shape=[None,self.seq_len,4],
                                           name="dna_seq")
@@ -178,8 +180,7 @@ class NucBinaryClassifier(NucInference):
         
         # Add gradient ops to graph with learning rate
         self.train_op = tf.train.AdamOptimizer(self.learning_rate,
-                                               beta1=self.beta1).minimize(self.loss,
-                                                                   global_step=self.global_step)
+                                               beta1=self.beta1).minimize(self.loss)
 
         self.load(self.checkpoint_dir)
 

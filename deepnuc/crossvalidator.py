@@ -17,7 +17,6 @@ class CrossValidator(object):
                  nuc_data,
                  cv_save_dir,
                  seed,
-                 nn_method=nucconvmodel.inferenceA,
                  k_folds=3,
                  test_frac=0.15):
 
@@ -30,7 +29,7 @@ class CrossValidator(object):
         :param nuc_data: An object derived from BaseNucData
         :param cv_save_dir: Save k models under this directory
         :param seed: An integer used to seed random shuffling 
-        :param nn_method: A dtlayers.py constructed neural network (examples in nucconvmodel.py)
+        :param nn_method_key: string name of method from nucconvmodels.py
         :param k_folds: Number of k-folds 
         :param test_frac: Fraction of nuc_data to be used for cross validation 
 
@@ -61,7 +60,7 @@ class CrossValidator(object):
             print('test_frac ',self.test_frac,' too large for k=',
             self.k_folds,' fold.') 
 
-        self.nn_method = nn_method
+        self.nn_method = nucconvmodel.methods_dict[params.inference_method_key]
 
         self.train_size = int((1-self.test_frac)*self.nuc_data.num_records)
         self.test_size = int(self.nuc_data.num_records-self.train_size)
@@ -81,11 +80,7 @@ class CrossValidator(object):
         from a seed value. Saving the seed value,k_folds, and test_frac will
         allow recovery of the exact same cross validation training/test splits
         """
-        if seed == None:
-            self.seed = np.random.randint(1e7)
-            print "Setting shuffling seed for cross validation to",self.seed
-        else:
-            self.seed = seed
+        self.seed = seed
 
         self.shuffled_indices = np.random.RandomState(self.seed).\
                                             permutation(range(self.nuc_data.num_records))
@@ -122,9 +117,10 @@ class CrossValidator(object):
                                                                  kfold_dir,
                                                                  self.params.keep_prob,
                                                                  self.params.beta1,
+                                                                 self.params.inference_method_key
                                                                  )
                 print "Building model for k-fold", k
-                self.nuc_classifier_list[k].build_model(self.nn_method)
+                self.nuc_classifier_list[k].build_model()
 
                 print "Training k-fold", k
                 print "Validation training set size",self.train_size
@@ -137,7 +133,15 @@ class CrossValidator(object):
                 self.optim_test_results[k]  = self.nuc_classifier_list[k].get_optimal_metrics(
                                                   self.nuc_classifier_list[k].test_metrics_vector,
                                                                    metric_key="auroc")
-              
+
+                plot_label = "k-fold "+str(k)
+                self.nuc_classifier_list[k].plot_test_epoch_vs_metric('auroc',
+                                                                      plot_label,
+                                                                      save_plot=True)
+                self.nuc_classifier_list[k].plot_test_epoch_vs_metric('auroc',
+                                                                      plot_label,
+                                                                      save_plot=True)
+                                                                 
             tf.reset_default_graph()
 
         
@@ -174,7 +178,7 @@ class CrossValidator(object):
         for result,message in ([(avg_train_results,'TRAIN'),(avg_test_results,'TEST')]):
             print 'AVERAGE {} metrics across {}-fold cross validation'.\
                                                          format(message,self.k_folds)
-            for k,v in result:
+            for k,v in result.items():
                 if type(v) != np.ndarray:
                     print '\t',k,":\t",v
             print "\n"
@@ -224,7 +228,6 @@ class RegressorCrossValidator(CrossValidator):
                  nuc_data,
                  cv_save_dir,
                  seed,
-                 nn_method=nucconvmodel.inferenceA,
                  k_folds=3,
                  test_frac=0.15,
                  classification_threshold=None,
@@ -235,7 +238,6 @@ class RegressorCrossValidator(CrossValidator):
                                              nuc_data=nuc_data,
                                              cv_save_dir=cv_save_dir,
                                              seed=seed,
-                                             nn_method=nn_method,
                                              k_folds=k_folds,
                                              test_frac=test_frac)
                                              
@@ -281,7 +283,7 @@ class RegressorCrossValidator(CrossValidator):
                                                                  self.classification_threshold,
                                                                  self.output_scale)
                 print "Building model for k-fold", k
-                self.nuc_classifier_list[k].build_model(self.nn_method)
+                self.nuc_classifier_list[k].build_model()
 
                 print "Training k-fold", k
                 print "Validation training set size",self.train_size

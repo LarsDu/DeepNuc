@@ -40,6 +40,7 @@ class NucRegressor(NucInference):
                  keep_prob=0.5,
                  beta1=0.9,
                  concat_revcom_input=False,
+                 nn_method_key="inferenceA",
                  classification_threshold=None,
                  output_scale=[0,1]):
 
@@ -53,7 +54,8 @@ class NucRegressor(NucInference):
                                     save_dir,
                                     keep_prob,
                                     beta1,
-                                    concat_revcom_input)
+                                    concat_revcom_input,
+                                    nn_method_key)
 
 
         self.training_mean,self.training_std = self.train_batcher.get_label_mean_std()
@@ -66,8 +68,8 @@ class NucRegressor(NucInference):
         '''
         
         #For now this can only work if nucdata and batcher are specified as having 1 class
-        if self.train_batcher.num_classes != 1 or self.test_batcher.num_classes !=1:
-            print "Error, more than two classes detected in batchers"
+        if self.train_batcher.num_classes != 1:
+            print "Error, more than two classes detected in train batcher"
         else:
             self.num_classes = 1
             
@@ -82,9 +84,8 @@ class NucRegressor(NucInference):
 
         
 
-    def build_model(self,nn_method):
+    def build_model(self):
 
-        self.nn_method = nn_method
         self.dna_seq_placeholder = tf.placeholder(tf.float32,
                                           shape=[None,self.seq_len,4],
                                           name="dna_seq")
@@ -139,8 +140,8 @@ class NucRegressor(NucInference):
         
         # Add gradient ops to graph with learning rate
         self.train_op = tf.train.AdamOptimizer(self.learning_rate,
-                                               beta1=self.beta1).minimize(self.loss,
-                                                                global_step = self.global_step)
+                                               beta1=self.beta1).minimize(self.loss)
+
 
         self.load(self.checkpoint_dir)
         tf.global_variables_initializer().run() 

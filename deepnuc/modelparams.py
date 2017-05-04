@@ -3,6 +3,9 @@ import numpy as np
 from collections import OrderedDict
 import itertools
 import nucconvmodel
+import json
+import os
+
 
 class GridParams(object):
 
@@ -14,7 +17,7 @@ class GridParams(object):
                  keep_prob = [0.5],
                  beta1 = [0.9],
                  concat_revcom_input=[False],
-                 inference_method=[nucconvmodel.inferenceA]):
+                 inference_method_key=["inferenceA"]):
 
         '''
         Pass parameters as a with values as list
@@ -27,7 +30,7 @@ class GridParams(object):
                                       ('keep_prob',set(keep_prob)),
                                       ('beta1',set(beta1)),
                                       ('concat_revcom_input',set(concat_revcom_input)),
-                                      ('inference_method',set(inference_method)),
+                                      ('inference_method_key',set(inference_method_key)),
                                      ])
         
         cartesian_prod = itertools.product(*self.param_dict.viewvalues())
@@ -51,7 +54,8 @@ class ModelParams(object):
                  keep_prob = 0.5,
                  beta1 = 0.9,
                  concat_revcom_input=False,
-                 inference_method=nucconvmodel.inferenceA):
+                 inference_method_key="inferenceA",
+                 json_file = None):
 
 
         ##Training parameters
@@ -74,20 +78,82 @@ class ModelParams(object):
         self.keep_prob = float(keep_prob)
         self.beta1 = float(beta1)
         self.concat_revcom_input = concat_revcom_input
-        self.inference_method = inference_method
+        self.inference_method_key = inference_method_key
+        self.inference_method = nucconvmodel.methods_dict[inference_method_key]
+
+        
         #self.k_folds = int(k_folds)
         #self.test_frac = float(test_frac)
-        self.params_dict = OrderedDict([
-                                      ('num_epochs',self.num_epochs),
-                                      ('learning_rate',self.learning_rate),
-                                      ('batch_size',self.batch_size),
-                                      ('keep_prob',self.keep_prob),
-                                      ('beta1',self.beta1),
-                                      ('concat_revcom_input',self.concat_revcom_input),
-                                      ('inference_method',self.inference_method),
-                                      ])
+        self.populate_param_dict()
+        self.json_file = json_file
         
+        
+    @classmethod
+    def init_json(cls,json_file):
+        json_filename = json_file
+        print "Parsing json file",json_filename
+        with open (json_filename,'r') as jf:
+            data = json.load(jf)
+            num_epochs = int(data['num_epochs'])
+            keep_prob = float(data['keep_prob'])
+            #num_iterations = int(data['num_iterations'])
+            learning_rate = np.float32(data['learning_rate'])
+            seq_len = int(data['seq_len'])
+            batch_size = int(data['batch_size'])
+            beta1 = data['beta1']
+            concat_revcom_input = data['concat_revcom_input']
+            inference_method_key = data['inference_method_key']
 
+            
+        return cls( seq_len,
+                    num_epochs,
+                    learning_rate,
+                    batch_size,
+                    keep_prob,
+                    beta1,
+                    concat_revcom_input,
+                    inference_method_key,
+                    json_file)
+
+
+
+        
+        
+    
+    def extract_json(self,json_file):
+        """Avoid using this in favor of ModelParams.init_json(json_file)"""
+        self.json_filename = os.path.abspath(json_file)
+        self.json_path = os.path.dirname(os.path.abspath(self.json_filename))
+        print "Parsing json file",self.json_filename
+        with open (self.json_filename,'r') as jf:
+            data = json.load(jf)
+            self.num_epochs = int(data['num_epochs'])
+            self.keep_prob = float(data['keep_prob'])
+            #self.num_iterations = int(data['num_iterations'])
+            self.learning_rate = np.float32(data['learning_rate'])
+            self.seq_len = int(data['seq_len'])
+            self.batch_size = int(data['batch_size'])
+            #self.k_folds = data['k_folds']
+            #self.test_frac = data['test_frac']
+            self.beta1 = data['beta1']
+            self.concat_revcom_input = data['concat_revcom_input']
+            self.inference_method_key = data['inference_method_key']
+            self.inference_method = nucconvmodel.methods_dict[self.inference_method_key]
+        self.populate_param_dict()
+        
+    def populate_param_dict(self):
+        self.params_dict = OrderedDict([
+                                      ('seq_len',int(self.seq_len)),
+                                      ('num_epochs',int(self.num_epochs)),
+                                      ('learning_rate',float(self.learning_rate)),
+                                      ('batch_size',int(self.batch_size)),
+                                      ('keep_prob',float(self.keep_prob)),
+                                      ('beta1',float(self.beta1)),
+                                      ('concat_revcom_input',self.concat_revcom_input),
+                                      ('inference_method_key',self.inference_method.__name__),
+                                      ])
+       
+        
     def print_param_values(self):
         print self.params_dict.values()
         
@@ -97,50 +163,11 @@ class ModelParams(object):
 
         print "\n"
         
-        
+    def save_as_json(self,out_file):
+        print "Saving ModelParams in", out_file
+        with open(out_file,'w') as of:
+            #print self.params_dict["inference_method_key"]
+            json.dump(self.params_dict,of)
 
-class JsonModelParams(ModelParams):
-    """
-    A class for processing training and model variables defined
-    in a Json file. User can define this file for setting up training
-    runs
-    """
     
-    def __init__(self,json_file):
-        self.json_filename = os.path.abspath(json_file)
-        self.json_path = os.path.dirname(os.path.abspath(self.json_filename))
-        print "Parsing json file",self.json_filename
-        with open (self.json_filename,'r') as jf:
-            data = json.load(jf)
-            ##'mode' should be set by commandline gflags
-                       
-            #Files
-            #Location of files relative to json file
-            #training_file = self.json_path+os.sep+data['files']['training_file']
-            #testing_file = self.json_path+os.sep+data['files']['testing_file']
-            
-            #save_dir=self.json_path+os.sep+os.path.basename(data['files']['save_dir'])
-            ##Training parameters
-            num_epochs = int(data['training_params']['num_epochs'])
-            keep_prob = float(data['training_params']['keep_prob'])
-            #self.num_iterations = int(data['training_params']['num_iterations'])
-            learning_rate = np.float32(data['training_params']['learning_rate'])
-            seq_len = int(data['training_params']['seq_len'])
-            batch_size = int(data['training_params']['batch_size'])
-            k_folds = data['training_params']['k_folds']
-            test_frac = data['training_params']['test_frac']
-            beta1 = data['training_params']['beta1']
-            concat_revcom_input = data['training_params']['concat_revcom_input']
-        #Initialize parent class
-        super(JsonModelParams,
-              self,
-              seq_len,
-              num_epochs,
-              learning_rate,
-              batch_size,
-              keep_prob,
-              beta1,
-              concat_revcom_input).__init__()
-                
-          
-
+        

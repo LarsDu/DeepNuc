@@ -24,7 +24,7 @@ class GridSearch(object):
             os.makedirs(self.save_dir)
 
         
-        self.seed = seed
+        self.seed = seed #For train/test cross validation splits
         self.k_folds =k_folds
         self.test_frac = test_frac
         self.cv_test_results = []
@@ -94,15 +94,16 @@ class GridSearch(object):
         
         bparams = self.best_model_params(metric)
 
-        perm_indices = np.random.RandomState(self.seed).\
-                    permutation(range(self.nuc_data.num_records))
+        all_indices = range(self.nuc_data.num_records)
+        #perm_indices = np.random.RandomState(self.seed).\
+        #            permutation()
         #test_frac = .2
         #test_size = int(self.nuc_data.num_records*test_frac)
         #train_size = self.nuc_data.num_records - test_size
         #test_indices = perm_indices[0:int(self.nuc_data.num_records*test_frac)]
         #train_indices = np.setdiff1d(perm_indices,test_indices)
         
-        train_batcher = DataBatcher(self.nuc_data,perm_indices)
+        train_batcher = DataBatcher(self.nuc_data,all_indices,range(self.nuc_data.num_records))
         #test_batcher = DataBatcher(self.nuc_data,test_indices)
         test_batcher = None
         self.best_classifier_folder = 'best_model'

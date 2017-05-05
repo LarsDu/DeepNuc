@@ -121,14 +121,6 @@ class NucRegressor(NucInference):
         
         self.summary_op = tf.summary.merge([self.loss_summary])
         
-        self.vars = tf.trainable_variables()
-        self.var_names = [var.name for var in self.vars] 
-        #print "Trainable variables:\n"
-        #for vname in self.var_names:
-        #    print vname
-            
-        self.saver = tf.train.Saver(self.vars)
-        
         #Note: Do not use tf.summary.merge_all() here. This will break encapsulation for
         # cross validation and lead to crashes when training multiple models
         
@@ -142,9 +134,19 @@ class NucRegressor(NucInference):
         self.train_op = tf.train.AdamOptimizer(self.learning_rate,
                                                beta1=self.beta1).minimize(self.loss)
 
-
+        
+        self.vars = tf.trainable_variables()
+        self.var_names = [var.name for var in self.vars] 
+        #print "Trainable variables:\n"
+        #for vname in self.var_names:
+        #    print vname
+            
+        self.saver = tf.train.Saver()
         self.load(self.checkpoint_dir)
-        tf.global_variables_initializer().run() 
+        self.init_op = tf.global_variables_initializer()
+
+        self.sess.run(self.init_op)
+        
       
 
         
@@ -159,7 +161,7 @@ class NucRegressor(NucInference):
         
         all_true = np.zeros((batcher.num_records,self.num_classes), dtype = np.float32)
         all_preds = np.zeros((batcher.num_records,self.num_classes), dtype = np.float32)
-       
+        
         
         num_whole_pulls =  batcher.num_records//eval_batch_size
         num_single_pulls= batcher.num_records%eval_batch_size
@@ -180,7 +182,8 @@ class NucRegressor(NucInference):
 
                 
             cur_preds= self.sess.run(self.logits,feed_dict=feed_dict)
-            
+
+           
             #Fill labels array
             if batch_size > 1:
                 start_ind = batch_size*i

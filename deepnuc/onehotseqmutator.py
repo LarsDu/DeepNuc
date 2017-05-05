@@ -14,7 +14,7 @@ class OnehotSeqMutator:
     def __init__(self,oh_nuc):
         """
 
-        :param oh_nuc: an nx4 onehot numpy array
+        :param oh_nuc: an 4xn onehot numpy array
 
         """
         self.seq_len = oh_nuc.shape[1]
@@ -62,11 +62,15 @@ class OnehotSeqMutator:
             self.oh_nuc[onei,self.nuci-1]=0
 
 
-    def pull_batch(batch_size):
-        #Batches are shape [b,seq_len,4]
+    def pull_batch(self,batch_size):
+        '''
+        Pull a batch with dims [batch_size,seq_len,4]
+        Note reversal of last two dimensions
+        '''
+        
         full_batch = np.zeros((batch_size,self.seq_len,4))
         for i in range(batch_size):
-            full_batch[i,:,:] = self.next()
+            full_batch[i,:,:] = self.next().T
         return full_batch
     
     def pack():
@@ -79,27 +83,23 @@ def main():
 
     print "oh_nuc"
     print dbt.onehot_to_nuc(oh_nuc)
-    
-    #for i in range(oh_nuc.shape[1]):
-    #    print oh_nuc[:,i]
-
+   
     ohi = OnehotSeqMutator(oh_nuc)
     print oh_nuc.shape
 
     '''
-    print ohi.next()
-    print ohi.next()
-    print ohi.next()
-    print ohi.next()
-    print ohi.next()
-    print ohi.next()
+    print "SHAPE",ohi.next().shape
     print ohi.next()
     print ohi.next()
     print ohi.next()
     '''
+    
     nucl = [dbt.onehot_to_nuc(next_seq) for next_seq in ohi]
     print dbt.onehot_to_nuc(oh_nuc)
     print nucl
+    
+    #print ohi.pull_batch(1)
+    #print ohi.pull_batch(1)
 
     
         

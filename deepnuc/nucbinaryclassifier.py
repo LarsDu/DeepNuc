@@ -162,31 +162,29 @@ class NucBinaryClassifier(NucInference):
         
         self.summary_op = tf.summary.merge([self.loss_summary])
         
+        
+        #Note: Do not use tf.summary.merge_all() here. This will break encapsulation for
+        # cross validation and lead to crashes when training multiple models
+        
+        # Add gradient ops to graph with learning rate
+        self.train_op = tf.train.AdamOptimizer(self.learning_rate,
+                                               beta1=self.beta1).minimize(self.loss)
+
+
+        
         self.vars = tf.trainable_variables()
         self.var_names = [var.name for var in self.vars] 
         #print "Trainable variables:\n"
         #for vname in self.var_names:
         #    print vname
             
-        self.saver = tf.train.Saver(self.vars)
-        
-        #Note: Do not use tf.summary.merge_all() here. This will break encapsulation for
-        # cross validation and lead to crashes when training multiple models
-        
-            
-    
-
-            
-        
-        # Add gradient ops to graph with learning rate
-        self.train_op = tf.train.AdamOptimizer(self.learning_rate,
-                                               beta1=self.beta1).minimize(self.loss)
-
+        self.saver = tf.train.Saver()
         self.load(self.checkpoint_dir)
-
-        tf.global_variables_initializer().run()
+        self.init_op = tf.global_variables_initializer()
         
-
+        self.sess.run(self.init_op)
+        
+        
     def eval_model_metrics(self,
                            batcher,
                            show_plots=False,

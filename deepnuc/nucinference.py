@@ -96,9 +96,12 @@ class NucInference(object):
         self.step=0
         #http://stackoverflow.com/questions/43218731/
         #deprecated DO NOT USE
-        self.global_step = tf.Variable(0, trainable=False,name='global_step')
+        #self.global_step = tf.Variable(0, trainable=False,name='global_step')
 
+        #Saver should be set in build_model() or load() after all ops are declared
+        self.saver = None
 
+        
         
     def save(self):
         if not os.path.exists(self.checkpoint_dir):
@@ -122,20 +125,25 @@ class NucInference(object):
         '''
         Load saved model from checkpoint directory.
         '''
+        if not self.saver:
+            self.saver = tf.train.Saver()
         print(" Retrieving checkpoints from", checkpoint_dir)
         ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
         
         if ckpt and ckpt.model_checkpoint_path:
+            self.saver.restore(self.sess,ckpt.model_checkpoint_path)
             print "\n\n\n\nSuccessfully loaded checkpoint from",ckpt.model_checkpoint_path
             #Extract step from checkpoint filename
             self.step = int(os.path.basename(ckpt.model_checkpoint_path).split('-')[1])
-            self.epoch = int(self.step/self.train_steps_per_epoch)
+            self.epoch = int(self.step//self.train_steps_per_epoch)
             #Load metrics from pickled metrics file
             metrics_file = self.metrics_dir+os.sep+'metrics-'+str(self.step)+'.p'
             with open(metrics_file,'r') as of:
-                print "Reading recorded metrics data from {}".format(metrics_file)
                 self.train_metrics_vector = pickle.load(of)
-                self.test_metrics_vector = pickle.load(of)
+                if self.test_batcher:
+                    self.test_metrics_vector = pickle.load(of)
+                print "Successfully loaded recorded metrics data from {}".format(metrics_file)
+
             return True
         else:
             print ("Failed to load checkpoint",checkpoint_dir)
@@ -157,7 +165,8 @@ class NucInference(object):
         #threads = tf.train.start_queue_runners(self.sess.coord)
 
         
-        
+
+
         start_time = time.time()
 
                        
@@ -207,8 +216,6 @@ class NucInference(object):
                      and self.epoch > 0
                      and self.epoch !=self.num_epochs
                      and self.step % self.train_steps_per_epoch == 0):
-                    print "Saving checkpoints"
-                    self.save()
                     print('Training data eval:')
                     train_metrics=self.eval_model_metrics(self.train_batcher)
                     self.print_metrics(train_metrics)
@@ -219,11 +226,13 @@ class NucInference(object):
                         test_metrics=self.eval_model_metrics(self.test_batcher)
                         self.test_metrics_vector.append(test_metrics)
                         self.print_metrics(test_metrics)
+
+                    print "Saving checkpoints"
+                    self.save()
+                 
                 if (self.epoch == self.num_epochs and self.step % self.train_steps_per_epoch ==0):
                     # This is the final step and epoch, save metrics
-                    print "Saving final checkpoint"
-                    self.save()
-
+                    
                     # Evaluate the entire training set.
                     print('Training data eval:')
                     #self.eval_model_accuracy(self.train_batcher)
@@ -236,6 +245,8 @@ class NucInference(object):
                         self.test_metrics_vector.append(self.eval_model_metrics(self.test_batcher,
                                                                     show_plots=False,
                                                                     save_plots=True))
+                    print "Saving final checkpoint"
+                    self.save()
 
 
         #Set return values 
@@ -296,7 +307,9 @@ class NucInference(object):
                                   metric_key="auroc",
                                   suffix = '',
                                   save_plot=True,
-                                  show_plot=False):
+                                  show_plot=False,
+                                  xmin = 0.0,
+                                  ymin=0.5):
         format_dict= {"auroc":"auROC","auPRC":"auprc","f1_score":"F1-Score"}
         num_mets = len(self.test_metrics_vector)
         if num_mets == 0:
@@ -309,8 +322,8 @@ class NucInference(object):
         ax.plot(ep_x,met_y)
 
         ax.set_xlabel("Number of epochs")
-        ax.set_xlim(0,ep_x[-1])
-        ax.set_ylim(0,met_y[-1])
+        ax.set_xlim(xmin,ep_x[-1])
+        ax.set_ylim(ymin,met_y[-1])
         if metric_key in format_dict:
             ax.set_title("Epoch vs. {} {}".format(format_dict[metric_key],suffix))
             ax.set_ylabel("{}".format(format_dict[metric_key]))
@@ -365,9 +378,15 @@ class NucInference(object):
         label, onehot_seq = batcher.pull_batch_by_index(index,batch_size=1)
         return self.mutation_map_ds(label,onehot_seq)
 
-
+    def print_global_variables(self):
+        print "Printing global_variables"
+        gvars =  list(tf.global_variables())
+        for var in gvars:
+            print "Variable name",var.name
+            print self.sess.run(var)
+            
     
-    def mutation_map_ds(self,onehot_seq,label = 1):
+    def mutation_map_ds(self,onehot_seq,label):
         """
         Create an matrix representing the effects of every
         possible mutation on classification score as described in Alipanahi et al 2015
@@ -375,34 +394,37 @@ class NucInference(object):
 
         #Mutate the pulled batch sequence.
         #OnehotSeqMutator will produce every SNP for the input sequence
-        oh_iter = (OnehotSeqMutator(onehot_seq))
+        oh_iter = OnehotSeqMutator(onehot_seq.T) #4xn inputs
 
         
         eval_batch_size = 75 #Number of generated examples to process in parallel
                              # with each step
 
         single_pulls = oh_iter.n%eval_batch_size
-        num_whole_batches = int(oh_iter.n-single_pulls)
+        num_whole_batches = int(oh_iter.n//eval_batch_size+single_pulls)
         num_pulls = num_whole_batches+single_pulls
+        
+        all_logits = np.zeros((oh_iter.n,self.num_classes))
 
-        all_logits = np.zeros((oh_iter.n))
-                               
+        
         for i in range(num_pulls):
             if i<num_whole_batches:
                 iter_batch_size = eval_batch_size
             else:
                 iter_batch_size=1
+            
+            labels_batch = np.asarray(iter_batch_size*[label])
             dna_seq_batch = oh_iter.pull_batch(iter_batch_size)
             feed_dict = {
                 self.dna_seq_placeholder: dna_seq_batch,
-                self.labels_placeholder: label,
+                self.labels_placeholder: labels_batch,
                 self.keep_prob_placeholder: 1.0
                 }
             
-            
+
             cur_logits = self.sess.run(self.logits,feed_dict=feed_dict)
             #TODO: Map these values back to the original nuc array
-
+            
 
             if iter_batch_size > 1:
                 start_ind = iter_batch_size*i
@@ -412,33 +434,52 @@ class NucInference(object):
                 print "Never reach this condition"
 
             start_ind = iter_batch_size*i
-            all_logits[start_ind:start_ind+iter_batch_size] = cur_logits
+            all_logits[start_ind:start_ind+iter_batch_size,:] = cur_logits
 
-            mutmap_ds=np.zeros_like(onehot_seq)
+            #print "OHseqshape",onehot_seq.shape
+            seq_len = onehot_seq.shape[0]
+            mutmap_ds=np.zeros((seq_len,4))
             k=0
+            
+            label_index = label.tolist().index(1)
             #Onehot seq mutator created SNPs in order
             #Fill output matrix with logits except where nucleotides unchanged
-            for i in range(4):
-                for j in range(onehot_seq.shape[1]):
+            #Remember onehot_seq is nx4 while nuc_heatmap takes inputs that are 4xn
+            for i in range(seq_len):
+                for j in range(4):
                     if onehot_seq[i,j] == 1:
                         mutmap_ds[i,j] = 0 #Set original letter to 0
                     else:
-                        mutmap_ds[i,j] = all_logits[k]
+                        mutmap_ds[i,j] = all_logits[k,label_index]
                         k+=1
-            
-        return mutmap_ds
 
 
-    def mutation_map_ds_heatmap(self,onehot_seq,label):
-        #onehot_seq = dbt.seq_to_onehot(seq)
+        return mutmap_ds.T
+
+
+    def mutation_map_ds_heatmap(self,onehot_seq,label,save_fig):
+        """
+
+        :param onehot_seq: nx4 matrix
+        :param label: 
+        :returns: 
+        :rtype: 
+
+        """
+        
+        seq = dbt.onehot_to_nuc(onehot_seq.T)
         mut_onehot = self.mutation_map_ds(onehot_seq,label)
-        seq = dbt.onehot_to_seq(onehot_seq)
-        nucheatmap.nuc_heatmap(seq,mut_onehot)
+        #print "mut_onehot",mut_onehot.shape
+        #print mut_onehot
+        nucheatmap.nuc_heatmap(seq,mut_onehot,save_fig=save_fig,show_plot=True)
 
     def mutation_map_ds_heatmap_batcher(self,batcher,index):
         batch_size = 1
         labels_batch, dna_seq_batch = batcher.pull_batch_by_index(index,batch_size)
-        self.mutation_map_ds_heatmap(self,dna_seq_batch[0],labels_batch[0])
+        #print "Index {} has label {}".format(index,labels_batch[0])
+        numeric_label = labels_batch[0].tolist().index(1)
+        save_fig = self.save_dir+'mut_map_ind{}_lab{}.png'.format(index,numeric_label)
+        self.mutation_map_ds_heatmap(dna_seq_batch[0],labels_batch[0],save_fig)
     
     def relevance_batch_plot(self,labels_batch,dna_seq_batch,image_name='relevance.png'):
         logosheets=[]

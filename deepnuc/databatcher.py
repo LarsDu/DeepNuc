@@ -10,7 +10,7 @@ class DataBatcher:
     nuc_data to create training and test splits
     """
     
-    def __init__(self,nuc_data,indices=None,use_onehot_labels=True):
+    def __init__(self,nuc_data,indices=None,use_onehot_labels=True,seed=None):
         self.nuc_data = nuc_data
 
         self.num_classes = nuc_data.num_classes
@@ -23,7 +23,14 @@ class DataBatcher:
             self.indices = indices
         self.num_records = len(self.indices)
 
-        self.perm_indices = np.random.permutation(self.indices)
+        
+        self.seed=seed
+        if self.seed==None:
+            self.perm_indices = np.random.permutation(self.indices)
+        else:
+            self.perm_indices = np.random.RandomState(self.seed).\
+                                            permutation(self.indices)
+
         self.epoch_tracker = EpochTracker(self.num_records)
 
 

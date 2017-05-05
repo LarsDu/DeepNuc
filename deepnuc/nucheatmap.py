@@ -58,6 +58,7 @@ def nuc_heatmap(seq,mat,save_fig='',show_plot=False,dims=[.25,2.25],):
     ax[1].set_yticklabels(ylets)
     color_ax_nucs(ax[1])
     if save_fig != '':
+        print "Saving nuc_heatmap to",save_fig
         fig.savefig(save_fig)
     if show_plot:
         fig.show()

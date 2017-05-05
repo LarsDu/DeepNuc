@@ -98,9 +98,11 @@ class CrossValidator(object):
                                                      self.use_onehot_labels)
 
 
+
             self.test_batcher_list[k] = DataBatcher(self.nuc_data,
                                                     test_indices,
                                                     self.use_onehot_labels)
+
 
             print "\n\n\nStarting k_fold", str(k)
             #with tf.variable_scope("kfold_"+str(k)):

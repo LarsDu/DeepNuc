@@ -17,23 +17,31 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import dtlayers as dtl
 import argparse
 
 #For seeing z-values in figures on mouseover
-from FormatPlot import Formatter 
+
 
 from tensorflow.examples.tutorials.mnist import input_data
+
+
+#Go one directory up and append to path to access the deepnuc package
+#The following statement is equiv to sys.path.append("../")
+import sys
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__),os.path.pardir)))
+import deepnuc.dtlayers as dtl
+from deepnuc.formatplot import Formatter 
 
 flags = tf.app.flags
 FLAGS = tf.app.flags.FLAGS
 
 flags.DEFINE_string('data_dir',"/tmp/data","""MNIST data directory""")
 flags.DEFINE_string('mode','train',"""Options: \'train\' or \'visualize\' """)
-flags.DEFINE_string('save_dir','mnist_test1',"""Directory under which to place checkpoints""")
+flags.DEFINE_string('save_dir','demos/dtl_mnist1',"""Directory under which to place checkpoints""")
 
 flags.DEFINE_integer('num_iterations',100000,""" Number of training iterations """)
-flags.DEFINE_integer('num_visualize',10,""" Number of samples to visualize"""
+flags.DEFINE_integer('num_visualize',10,""" Number of samples to visualize""")
 flags.DEFINE_integer('batch_size',25,""" Number of samples to visualize""")
 
 def main(_):
@@ -61,64 +69,40 @@ def main(_):
     
     #Example with only convolutional layers
 
-    cl1 = dtl.Conv(x_image, filter_shape = [5,5,1,10],padding = 'VALID',name='conv1')
+    cl1 = dtl.Conv2d(x_image, filter_shape = [5,5,1,10],padding = 'VALID',name='conv1')
     r1 = dtl.Relu(cl1)
     p1 = dtl.AvgPool(r1,[2,2],'avg_pool1')
-    cl2 = dtl.Conv(p1, filter_shape = [5,5,10,25],
+    cl2 = dtl.Conv2d(p1, filter_shape = [5,5,10,25],
                        strides=[1,1,1,1],
                        padding='VALID',name='conv2')
     r2 = dtl.Relu(cl2)
     p2 = dtl.AvgPool(r2,[2,2],'avg_pool2')
     flat = dtl.Flatten(p2)
-    cl3 = dtl.Conv(p2, filter_shape = [4,4,25,100],
+    cl3 = dtl.Conv2d(p2, filter_shape = [4,4,25,100],
                        strides=[1,1,1,1],
                        padding='VALID',name='conv3')
     r3 = dtl.Relu(cl3)
     p3 = dtl.AvgPool(r3,[2,2],'avg_pool3')
-    cl4 = dtl.Conv(p3,filter_shape=[1,1,100,10],
+    cl4 = dtl.Conv2d(p3,filter_shape=[1,1,100,10],
                       strides=[1,1,1,1],
                       padding='VALID',
                       name='conv4')
     flat = dtl.Flatten(cl4)
 
     nn = dtl.Network(x_image,[flat],bounds=[0.,1.])
-    """
-    #Example with fully connected layer
-    cl1 = dtl.Conv(x_image, filter_shape = [5,5,1,10],padding = 'VALID',name='conv1')
-    r1 = dtl.Relu(cl1)
-    p1 = dtl.AvgPool(r1,[2,2],'avg_pool1')
-    cl2 = dtl.Conv(p1, filter_shape = [5,5,10,25],strides=[1,1,1,1],padding='VALID',name='conv2')
-    r2 = dtl.Relu(cl2)
-    p2 = dtl.AvgPool(r2,[2,2],'avg_pool2')
-    flat = dtl.Flatten(p2)
-    l1 = dtl.Linear(flat,100,'linear1')
-    r3 = dtl.Relu(l1)
-    l2 = dtl.Linear(r3,50,'linear2' )  
-    r4 = dtl.Relu(l2)
-    l3 = dtl.Linear(r4,10,'linear3' )
-    #cl3 = dtl.ConvLayer(p2,filter_shape = [4,4,25,100],strides=[1,1,1,1],padding='VALID',name='conv3')
-    #r3 = dtl.ReluLayer(cl3)
-    #p3 = dtl.AvgPoolLayer(r3,'avg_pool3')
-    #cl4 = dtl.ConvLayer(p3,filter_shape=[1,1,100,10],strides=[1,1,1,1],padding='VALID',name='conv4')
-    #flat = dtl.Flatten(cl4)
-
-    """
-
-    
-   # nn = dtl.Network(x_image,[cl1,r1,p1, cl2,r2,p2,flat,l1,r3,l2,r4,l3],bounds=[0.,1.])
 
     '''
     Note:
-    	Initializing with only the last layer l3 will automatically construct the
+    	Initializing with only the last layer flat will automatically construct the
         list of layers:
 
-        dtl.Network(x_image,[l3],bounds=[0.,1.])
+        dtl.Network(x_image,[flat],bounds=[0.,1.])
     '''
     
     y = nn.forward() #These are the logits
 
     # Define loss and optimizer
-    y_ = tf.placeholder(tf.float32, [None, 10])
+    y_ = tf.placeholder(tf.float32, [None, 10]) #These are the labels
 
     
     
@@ -131,14 +115,13 @@ def main(_):
     #
     # So here we use tf.nn.softmax_cross_entropy_with_logits on the raw
     # outputs of 'y', and then average across the batch.
-    softmax = tf.nn.softmax_cross_entropy_with_logits(y, y_)
-    cross_entropy = tf.reduce_mean(softmax)
-    #train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
-    train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
+    loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y, labels=y_))
+    
+    train_step = tf.train.AdamOptimizer(1e-4).minimize(loss)
 
     
     with tf.Session() as sess:
-        init_op = tf.initialize_all_variables()
+        init_op = tf.global_variables_initializer()
         sess.run(init_op)
         saver = tf.train.Saver()
         #Test conv op by itself
@@ -166,10 +149,17 @@ def main(_):
                 #cl1_val = sess.run(cl1.output,feed_dict={x: batch_xs, y_: batch_ys})
                 #print (np.asarray(cl1_val).shape)
                 # Test trained model
+
+                if i% 4000 == 0:
+                    ckpt_name = "model_ckpt"
+                    save_path =saver.save(sess,checkpoint_dir+os.sep+ckpt_name)
+                    print("Model saved in file: %s" % save_path)
+    
+                
             correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
-            #accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-            #print(sess.run(accuracy, feed_dict={x: mnist.test.images,
-            #                             y_: mnist.test.labels}))
+            accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+            print(sess.run(accuracy, feed_dict={x: mnist.test.images,
+                                         y_: mnist.test.labels}))
 
             eval_model(sess,correct_prediction,mnist,x,y_)
 
@@ -193,17 +183,18 @@ def main(_):
             for i in range(num_visualize):
                 batch_xs, batch_ys = mnist.train.next_batch(1)
 
-
-                r_input = sess.run(nn.relevance_backprop(y*y_),
+                rj_final_op = tf.multiply(y,y_)
+                r_input,rj_final_val = sess.run([nn.relevance_backprop(rj_final_op),rj_final_op],
                                    feed_dict={x:batch_xs,y_:batch_ys})
-
-                r_input_img=np.squeeze(r_input) 
-                #r_input_img = np.reshape(r_input,(28,28))
                 
+                r_input_img=np.squeeze(r_input) 
+                
+                r_input_sum = np.sum(r_input)
+
+                print "Rj final {}, Rj sum {}".format(np.sum(rj_final_val),r_input_sum)
 
 
                 #utils.visualize(r_input[:,2:-2,2:-2],utils.heatmap,'deeptaylortest_'+str(i)+'_.png')
-
                 
                 #Display original input
                 #plt.imshow(np.reshape(np.asarray(batch_xs),(28,28)))

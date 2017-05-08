@@ -17,13 +17,18 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import DeepTaylorLayers as dtl
 import argparse
 
-#For seeing z-values in figures on mouseover
-from FormatPlot import Formatter 
 
 from tensorflow.examples.tutorials.mnist import input_data
+
+import sys
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__),os.path.pardir)))
+import deepnuc.dtlayers as dtl
+from deepnuc.formatplot import Formatter 
+
+
 
 flags = tf.app.flags
 FLAGS = tf.app.flags.FLAGS
@@ -60,7 +65,7 @@ def main(_):
     
     #Example replacing pooling layers with strided conv layers
 
-    cl1 = dtl.Conv(x_image, filter_shape = [5,5,1,10],padding = 'VALID',name='conv1')
+    cl1 = dtl.Conv2d(x_image, filter_shape = [5,5,1,10],padding = 'VALID',name='conv1')
     r1 = dtl.Relu(cl1)
     #p1 = dtl.AvgPool(r1,[2,2],'avg_pool1')
     p1 = dtl.Conv2d(r1,filter_shape=[3,3,10,10],
@@ -149,10 +154,10 @@ def main(_):
     #
     # So here we use tf.nn.softmax_cross_entropy_with_logits on the raw
     # outputs of 'y', and then average across the batch.
-    softmax = tf.nn.softmax_cross_entropy_with_logits(y, y_)
-    cross_entropy = tf.reduce_mean(softmax)
-    #train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
-    train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
+    
+    loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y, labels=y_))
+    #train_step = tf.train.GradientDescentOptimizer(0.5).minimize(loss)
+    train_step = tf.train.AdamOptimizer(1e-4).minimize(loss)
 
     
     with tf.Session() as sess:
@@ -186,16 +191,18 @@ def main(_):
                 #cl1_val = sess.run(cl1.output,feed_dict={x: batch_xs, y_: batch_ys})
                 #print (np.asarray(cl1_val).shape)
                 # Test trained model
+               
+                if i% 4000 == 0:
+                    ckpt_name = "model_ckpt"
+                    save_path =saver.save(sess,checkpoint_dir+os.sep+ckpt_name)
+                    print("Model saved in file: %s" % save_path)
+
             correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-
             print(sess.run(accuracy, feed_dict={x: mnist.test.images,
                                           y_: mnist.test.labels}))
 
 
-            ckpt_name = "model_ckpt"
-            save_path =saver.save(sess,checkpoint_dir+os.sep+ckpt_name)
-            print("Model saved in file: %s" % save_path)
 
         #Decomposition:
         #Look up and retrieve most recent checkpoint

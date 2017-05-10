@@ -15,7 +15,7 @@ import scipy.stats
 from nucinference import NucInference
 
 import matplotlib
-matplotlib.use('TkAgg')
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pprint
 from itertools import cycle
@@ -142,18 +142,15 @@ class NucRegressor(NucInference):
         #    print vname
             
         self.saver = tf.train.Saver()
-        self.load(self.checkpoint_dir)
         self.init_op = tf.global_variables_initializer()
-
         self.sess.run(self.init_op)
+        self.load(self.checkpoint_dir)
         
-      
-
         
     def eval_model_metrics(self,
                            batcher,
-                           show_plots=False,
                            save_plots=False,
+                           image_name='auroc_auprc.png',
                            eval_batch_size=50):
         """
         Note: This method is intended to only be used for regression tasks 
@@ -252,7 +249,7 @@ class NucRegressor(NucInference):
       
         
                 
-        if (show_plots or save_plots) and self.classification_threshold:
+        if save_plots and self.classification_threshold:
              ###Plot some metrics
             plot_colors = cycle(['cyan','blue','orange','teal'])
         
@@ -289,15 +286,11 @@ class NucRegressor(NucInference):
             #Note: Presumably class 1 (pos examples) should be the only f1 score we focus on
             #print "F1 score for class",i,"is",f1_score
             plt.tight_layout()
-
-            if show_plots:
-                plt.show()
         
-            if save_plots:
-                image_name = 'auroc_auprc.png'
-                plt_fname = self.save_dir+os.sep+image_name
-                print "Saving auROC image to",plt_fname
-                fig1.savefig(plt_fname)    
+
+            plt_fname = self.save_dir+os.sep+image_name
+            print "Saving auROC image to",plt_fname
+            fig1.savefig(plt_fname)    
         
         return md
 

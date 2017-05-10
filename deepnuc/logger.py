@@ -18,8 +18,6 @@ class Logger(object):
     def __init__(self,log_file="log1.log"):
 
         self.terminal = sys.stdout
-
-
         self.base_dir = os.path.split(log_file)[0]
         try:
             os.makedirs(self.base_dir)

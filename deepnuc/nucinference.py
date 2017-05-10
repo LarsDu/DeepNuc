@@ -3,7 +3,7 @@ import numpy as np
 import time
 
 import matplotlib
-matplotlib.use('TkAgg')
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pprint
 
@@ -94,11 +94,12 @@ class NucInference(object):
 
         self.epoch = 0
         self.step=0
+
         #http://stackoverflow.com/questions/43218731/
-        #deprecated DO NOT USE
+        #Deprecated method of saving step on graph
         #self.global_step = tf.Variable(0, trainable=False,name='global_step')
 
-        #Saver should be set in build_model() or load() after all ops are declared
+        #Saver should be set in build_model() after all ops are declared
         self.saver = None
 
         
@@ -125,8 +126,6 @@ class NucInference(object):
         '''
         Load saved model from checkpoint directory.
         '''
-        if not self.saver:
-            self.saver = tf.train.Saver()
         print(" Retrieving checkpoints from", checkpoint_dir)
         ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
         
@@ -237,14 +236,14 @@ class NucInference(object):
                     print('Training data eval:')
                     #self.eval_model_accuracy(self.train_batcher)
                     self.train_metrics_vector.append( self.eval_model_metrics(self.train_batcher,
-                                                                 show_plots=False,
-                                                                 save_plots=True))
+                                                                 save_plots=True,
+                                                                 image_name='train_metrics.png'))
 
                     if self.test_batcher != None:
                         print('Testing data eval:')
                         self.test_metrics_vector.append(self.eval_model_metrics(self.test_batcher,
-                                                                    show_plots=False,
-                                                                    save_plots=True))
+                                                                    save_plots=True,
+                                                                    image_name='test_metrics.png'))
                     print "Saving final checkpoint"
                     self.save()
 
@@ -265,12 +264,11 @@ class NucInference(object):
         return ret_metrics
 
 
-    def eval_batchers(self,show_plots=False,save_plots=True):
+    def eval_batchers(self,save_plots=True):
         # Evaluate training and test batcher data.
         print('Training data eval:')
         #self.eval_model_accuracy(self.train_batcher)
         train_results_dict = self.eval_model_metrics(self.train_batcher,
-                                                     show_plots=show_plots,
                                                      save_plots=save_plots)
 
         self.print_metrics(train_results_dict)
@@ -278,7 +276,6 @@ class NucInference(object):
         if self.test_batcher != None:
             print('Testing data eval:')
             test_results_dict = self.eval_model_metrics(self.test_batcher,
-                                                        show_plots=show_plots,
                                                         save_plots=save_plots)
         self.print_metrics(test_results_dict)
 
@@ -307,7 +304,6 @@ class NucInference(object):
                                   metric_key="auroc",
                                   suffix = '',
                                   save_plot=True,
-                                  show_plot=False,
                                   xmin = 0.0,
                                   ymin=0.5):
         format_dict= {"auroc":"auROC","auPRC":"auprc","f1_score":"F1-Score"}
@@ -322,8 +318,8 @@ class NucInference(object):
         ax.plot(ep_x,met_y)
 
         ax.set_xlabel("Number of epochs")
-        ax.set_xlim(xmin,ep_x[-1])
-        ax.set_ylim(ymin,met_y[-1])
+        ax.set_xlim(xmin,ep_x[-1]+5)
+        ax.set_ylim(ymin,1.0)
         if metric_key in format_dict:
             ax.set_title("Epoch vs. {} {}".format(format_dict[metric_key],suffix))
             ax.set_ylabel("{}".format(format_dict[metric_key]))
@@ -333,61 +329,279 @@ class NucInference(object):
         if save_plot:
             plot_file = self.save_dir+os.sep+"epoch_vs_{}_{}.png".format(metric_key,suffix)
             fig.savefig(plot_file)
-        if show_plot:
-            fig.show()
+
     
 
-                          
-    def get_optimal_metrics(self,metrics_vector, metric_key="auroc"):
-        """
-        Get the metrics from the epoch where a given metric was at it maximum
-        """
-        best_val = 0
-        for metric in metrics_vector:
-            best_val = max(metric[metric_key],best_val)
 
-        for metric in metrics_vector:
-            #metric here is an OrderedDict of metrics
-            if metric[metric_key]==best_val:
-                return metric
-    
-    def relevance_batch(self,dna_seq_batch,labels_batch):
-        """ Return the relevance of a single batch of labels and data """
+    ###Relevance batch methods###
+
+    def relevance_from_nucs(self,nucs,label):
+        """
+        Return the relevance of a nucleotide sequence and corresponding label
+                
+        :nuc_seq: string nucleotide sequence
+        :label: 1 x num_classes numpy indicator array
+        :returns: 4xn relevance matrix
+        :rtype: numpy array
+        """
+
+        return self.run_relevance(dbt.seq_to_onehot(nuc_seq),label)
+        
+    def run_relevance(self,onehot_seq,label):
+        """
+        Return the relevance of a onehot encoded sequence and corresponding label
+                
+        :onehot_seq: nx4 onehot representation of a nucleotide sequence
+        :label: 1 x num_classes numpy indicator array
+        :returns: 4xn relevance matrix
+        :rtype: numpy array
+        """
+        
         feed_dict = {
-            self.dna_seq_placeholder: dna_seq_batch,
-            self.labels_placeholder: labels_batch,
+            self.dna_seq_placeholder: np.expand_dims(onehot_seq,axis=0),
+            self.labels_placeholder: np.expand_dims(label,axis=0),
             self.keep_prob_placeholder: 1.0
             }
-        batch_relevance = self.sess.run(self.relevance,feed_dict=feed_dict)
-        return batch_relevance
+        relevance_batch = self.sess.run(self.relevance,feed_dict=feed_dict)
+        relevance = np.squeeze(relevance_batch[0],axis=0).T
+
+        return relevance
 
 
-    def relevance_batch_by_index(self,batcher,index):
+    def relevance_from_batcher(self,batcher,index):
+        """
+        :param batcher: DataBatcher object
+        :param index: integer index of item in DataBatcher object
+        :returns: 4xn relevance matrix
+        :rtype: numpy array
+    
+        """
+        
         batch_size=1 #Needs to be 1 for now due to conv2d_transpose issue
-        labels_batch, dna_seq_batch = batcher.pull_batch_by_index(index,batch_size)
-        rel_mat = self.relevance_batch_plot(labels_batch,dna_seq_batch,"decomp_"+str(index)+'.png')
+        label, onehot_seq = batcher.pull_batch_by_index(index,batch_size)
+        rel_mat = self.run_relevance(onehot_seq[0],label[0])
         return rel_mat
 
+    def plot_relevance_logo_from_batcher(self,batcher,index):
+        batch_size=1 #Needs to be 1 for now due to conv2d_transpose issue
+        label, onehot_seq = batcher.pull_batch_by_index(index,batch_size)
+        numeric_label = labels_batch[0].tolist().index(1)
+        save_fig = self.save_dir+os.sep+'relevance_logo_ind{}_lab{}.png'.format(index,
+                                                                        numeric_label)
+        self.plot_relevance_logo(onehot_seq,label,save_fig)
 
-    def mutation_map_ds_from_batcher(self,batcher,index):
+        
+    def plot_relevance_heatmap_from_batcher(self,batcher,index):
+        batch_size=1 #Needs to be 1 for now due to conv2d_transpose issue
+        labels_batch,dna_batch = batcher.pull_batch_by_index(index,batch_size)
+        numeric_label = labels_batch[0].tolist().index(1)
+        save_fig = self.save_dir+os.sep+'relevance_heat_ind{}_lab{}.png'.format(index,
+                                                                        numeric_label)
+        self.plot_relevance_heatmap(dna_batch[0],
+                                    labels_batch[0],
+                                    save_fig)
+    
+
+     
+
+    def plot_relevance_heatmap(self,onehot_seq,label,save_fig):
+        relevance = self.run_relevance(onehot_seq,label)
+        seq = dbt.onehot_to_nuc(onehot_seq.T)
+        
+        fig,ax = nucheatmap.nuc_heatmap(seq,
+                               relevance,
+                               save_fig=save_fig,
+                               clims = [0,np.max(relevance)],
+                               cmap='Blues')
+        
+
+    
+    def plot_relevance_logo(self,onehot_seq,label,save_fig):
+        logosheets=[]
+        input_seqs=[]
+               
+        np.set_printoptions(linewidth=500,precision=4)
+        save_file = self.save_dir+save_fig
+
+        
+        relevance = self.relevance(onehot_seq,label)
+        r_img = np.squeeze(relevance).T
+
+       
+        ###Build a "relevance scaled position weight matrix"
+        #Convert each position to a position probability matrix
+        r_ppm = r_img/np.sum(r_img,axis=0)
+        
+        lh = LogoTools.PwmTools.ppm_to_logo_heights(r_ppm)
+        #Relevance scale logo_heights
+        r_rel =np.sum(r_img,axis=0) #relavance by position
+        max_relevance = np.max(r_rel)
+        min_relevance = np.min(r_rel)
+        #print "r_rel max", max_relevance
+        #print "r_rel min", min_relevance
+
+        #lh is in bits of information
+        #Rescale logo_heights to r_rel
+        scaled_lh = lh * r_rel/(max_relevance - min_relevance)
+        logosheets.append(scaled_lh*25)
+        input_seqs.append(onehot_seq.T)
+
+        rel_sheet = LogoTools.LogoNucSheet(logosheets,input_seqs,input_type='heights')
+        rel_sheet.write_to_png(save_file)
+
+        #plt.pcolor(r_img,cmap=plt.cm.Reds)
+        #print "A relevance"
+        #plt.plot(r_img[0,:])
+        #print "Relevance by position"
+        #plt.plot(np.sum(r_img,axis=0))
+
+
+        #logits_np = self.sess.run(self.logits,
+        #                 feed_dict=feed_dict)
+
+
+        #Print actual label and inference if classification 
+        #guess = logits_np.tolist()
+        #guess = guess[0].index(max(guess[0]))
+        #actual = labels_batch[0].tolist().index(1.)
+        #print logits_np
+        #print self.sess.run(self.probs,feed_dict=feed_dict)
+        #print ("Guess:",(guess))
+        #print ("Actual:",(actual))
+
+
+
+
+
+        
+    ##Alipanahi mut map methods###
+
+    def alipanahi_mutmap(self,onehot_seq,label):
         """
         Create an matrix representing the effects of every
-        possible mutation on classification score as described in Alipanahi et al 2015.
-        Retrieve this data from a databatcher
-        """
-        label, onehot_seq = batcher.pull_batch_by_index(index,batch_size=1)
-        return self.mutation_map_ds(label,onehot_seq)
+        possible mutation on classification score as described in Alipanahi et al 2015
 
-    def print_global_variables(self):
-        print "Printing global_variables"
-        gvars =  list(tf.global_variables())
-        for var in gvars:
-            print "Variable name",var.name
-            print self.sess.run(var)
-            
-    
-    def mutation_map_ds(self,onehot_seq,label):
+        :onehot_seq: nx4 onehot representation of a nucleotide sequence
+        :label: 1 x num_classes numpy indicator array
         """
+        
+        #Mutate the pulled batch sequence.
+        #OnehotSeqMutator will produce every SNP for the input sequence
+        oh_iter = OnehotSeqMutator(onehot_seq.T) #4xn inputs
+
+        
+        eval_batch_size = 75 #Number of generated examples to process in parallel
+                             # with each step
+
+        single_pulls = oh_iter.n%eval_batch_size
+        num_whole_batches = int(oh_iter.n//eval_batch_size+single_pulls)
+        num_pulls = num_whole_batches+single_pulls
+        
+        all_probs = np.zeros((oh_iter.n,self.num_classes))
+
+        
+        for i in range(num_pulls):
+            if i<num_whole_batches:
+                iter_batch_size = eval_batch_size
+            else:
+                iter_batch_size=1
+            
+            labels_batch = np.asarray(iter_batch_size*[label])
+            dna_seq_batch = oh_iter.pull_batch(iter_batch_size)
+            feed_dict = {
+                self.dna_seq_placeholder: dna_seq_batch,
+                self.labels_placeholder: labels_batch,
+                self.keep_prob_placeholder: 1.0
+                }
+            
+
+            cur_probs = self.sess.run(self.probs,feed_dict=feed_dict)
+            #TODO: Map these values back to the original nuc array
+            
+
+            if iter_batch_size > 1:
+                start_ind = iter_batch_size*i
+            elif iter_batch_size == 1:
+                start_ind = num_whole_batches*eval_batch_size+(i-num_whole_batches)
+            else:
+                print "Never reach this condition"
+
+            start_ind = iter_batch_size*i
+            all_probs[start_ind:start_ind+iter_batch_size,:] = cur_probs
+
+            
+            
+            #print "OHseqshape",onehot_seq.shape
+            seq_len = onehot_seq.shape[0]
+            amutmap_ds=np.zeros((seq_len,4))
+
+
+            label_index = label.tolist().index(1)
+            #Onehot seq mutator created SNPs in order
+            #Fill output matrix with logits except where nucleotides unchanged
+            #Remember onehot_seq is nx4 while nuc_heatmap takes inputs that are 4xn
+
+            ps_feed_dict = {
+                self.dna_seq_placeholder:np.expand_dims(onehot_seq,axis=0),
+                self.labels_placeholder: np.expand_dims(label,axis=0),
+                self.keep_prob_placeholder: 1.0
+                }
+
+            #ps is the original score of the original input sequence
+            ps = self.sess.run(self.probs,feed_dict=ps_feed_dict)[0][label_index]
+            k=0
+
+
+            for i in range(seq_len):
+                for j in range(4):
+                    if onehot_seq[i,j] == 1:
+                        amutmap_ds[i,j] = 0 #Set original letter to 0
+                    else:
+                        #ps_hat is the score for a given snp
+                        ps_hat = all_probs[k,label_index]
+                        amutmap_ds[i,j] = (ps_hat - ps)*max(0,ps_hat,ps)
+                        k+=1
+
+            #mutmap_ds is nx4
+            
+        return amutmap_ds.T
+
+
+    def alipanahi_mutmap_from_batcher(self,batcher,index):
+        label,onehot_seq = batcher.pull_batch_by_index(index,batch_size)
+        return self.alipanahi_mutmap(onehot_seq,label)
+    
+    def plot_alipanahi_mutmap(self,onehot_seq,label,save_fig):
+        seq = dbt.onehot_to_nuc(onehot_seq.T)
+        amut_onehot = self.alipanahi_mutmap(onehot_seq,label)
+        nucheatmap.nuc_heatmap(seq,amut_onehot,save_fig=save_fig)
+
+    def plot_alipanahi_mutmap_from_batcher(self,batcher,index):
+        batch_size = 1
+        labels_batch, dna_seq_batch = batcher.pull_batch_by_index(index,batch_size)
+        #print "Index {} has label {}".format(index,labels_batch[0])
+        numeric_label = labels_batch[0].tolist().index(1)
+        save_fig = self.save_dir+os.sep+'alipanahi_mut_map_ind{}_lab{}.png'.format(index,
+                                                                                   numeric_label)
+        self.plot_alipanahi_mutmap(dna_seq_batch[0],labels_batch[0],save_fig)
+    
+        
+
+    
+
+
+
+    ###Mutmap methods###
+    # generate every possible snp and measure change in logit
+
+    
+    
+
+    
+    def mutmap(self,onehot_seq,label):
+        """
+        :onehot_seq: nx4 onehot representation of a nucleotide sequence
+        :label: integer numeric label (ie: 0 or 1 for a NucBinaryClassifier) 
         Create an matrix representing the effects of every
         possible mutation on classification score as described in Alipanahi et al 2015
         """
@@ -453,107 +667,73 @@ class NucInference(object):
                         mutmap_ds[i,j] = all_logits[k,label_index]
                         k+=1
 
-
         return mutmap_ds.T
 
 
-    def mutation_map_ds_heatmap(self,onehot_seq,label,save_fig):
+    def mutmap_from_batcher(self,batcher,index):
         """
+        Create an matrix representing the effects of every
+        possible mutation on classification score as described in Alipanahi et al 2015.
+        Retrieve this data from a databatcher
+        """
+        label, onehot_seq = batcher.pull_batch_by_index(index,batch_size=1)
+        return self.mutmap(onehot_seq,label)
 
+    
+    def plot_mutmap(self,onehot_seq,label,save_fig):
+        """
         :param onehot_seq: nx4 matrix
         :param label: 
         :returns: 
         :rtype: 
-
         """
         
         seq = dbt.onehot_to_nuc(onehot_seq.T)
-        mut_onehot = self.mutation_map_ds(onehot_seq,label)
+        mut_onehot = self.mutmap(onehot_seq,label)
         #print "mut_onehot",mut_onehot.shape
         #print mut_onehot
-        nucheatmap.nuc_heatmap(seq,mut_onehot,save_fig=save_fig,show_plot=True)
+        return nucheatmap.nuc_heatmap(seq,mut_onehot,save_fig=save_fig)
 
-    def mutation_map_ds_heatmap_batcher(self,batcher,index):
+    def plot_mutmap_from_batcher(self,batcher,index):
         batch_size = 1
         labels_batch, dna_seq_batch = batcher.pull_batch_by_index(index,batch_size)
         #print "Index {} has label {}".format(index,labels_batch[0])
         numeric_label = labels_batch[0].tolist().index(1)
-        save_fig = self.save_dir+'mut_map_ind{}_lab{}.png'.format(index,numeric_label)
-        self.mutation_map_ds_heatmap(dna_seq_batch[0],labels_batch[0],save_fig)
+        save_fig = self.save_dir+os.sep+'mut_map_ind{}_lab{}.png'.format(index,numeric_label)
+        return self.plot_mutmap(dna_seq_batch[0],labels_batch[0],save_fig)
     
-    def relevance_batch_plot(self,labels_batch,dna_seq_batch,image_name='relevance.png'):
-        logosheets=[]
-        input_seqs=[]
-
-        feed_dict={
-                   self.dna_seq_placeholder:dna_seq_batch,
-                   self.labels_placeholder:labels_batch,
-                   self.keep_prob_placeholder:1.0
-                  }
-
-        #Note that this should only hold if batch_size=1
-        #flat_relevance = tf.reshape(relevance,[-1])
-        r_input = self.sess.run(self.relevance,
-                                feed_dict=feed_dict)
-        r_img = np.squeeze(r_input).T
-
-        #print r_img
-        #print r_img.shape
-
-        np.set_printoptions(linewidth=500,precision=4)
-
-        
-        ###Build a "relevance scaled position weight matrix"
-        #Convert each position to a position probability matrix
-        r_ppm = r_img/np.sum(r_img,axis=0)
-        
-        lh = LogoTools.PwmTools.ppm_to_logo_heights(r_ppm)
-        #Relevance scale logo_heights
-        r_rel =np.sum(r_img,axis=0) #relavance by position
-        max_relevance = np.max(r_rel)
-        min_relevance = np.min(r_rel)
-        #print "r_rel max", max_relevance
-        #print "r_rel min", min_relevance
-
-        #lh is in bits of information
-        #Rescale logo_heights to r_rel
-        scaled_lh = lh * r_rel/(max_relevance - min_relevance)
-        logosheets.append(scaled_lh*25)
-        input_seqs.append(dna_seq_batch[0].T)
-
-        save_file = self.save_dir+image_name
-        rel_sheet = LogoTools.LogoNucSheet(logosheets,input_seqs,input_type='heights')
-        rel_sheet.write_to_png(save_file)
-
-        #Plot heatmap
-
-        heatmap_im = os.path.splitext(image_name)[0]+'_heatmap.png'
-        seq = dbt.onehot_to_nuc(dna_seq_batch[0].T)
-        print labels_batch
-        nucheatmap.nuc_heatmap(seq,r_img,heatmap_im,heatmap_im)
-        
-        #plt.pcolor(r_img,cmap=plt.cm.Reds)
-        #plt.show()
-
-        #print "A relevance"
-        #plt.plot(r_img[0,:])
-        #plt.show()
-        #print "Relevance by position"
-        #plt.plot(np.sum(r_img,axis=0))
-        #plt.show()
 
 
-        #logits_np = self.sess.run(self.logits,
-        #                 feed_dict=feed_dict)
 
 
-        #Print actual label and inference if classification 
-        #guess = logits_np.tolist()
-        #guess = guess[0].index(max(guess[0]))
-        #actual = labels_batch[0].tolist().index(1.)
-        #print logits_np
-        #print self.sess.run(self.probs,feed_dict=feed_dict)
-        #print ("Guess:",(guess))
-        #print ("Actual:",(actual))
 
+
+
+    #################
+
+
+    def print_global_variables(self):
+        """Print all variable names from the current graph"""
+        print "Printing global_variables"
+        gvars =  list(tf.global_variables())
+        for var in gvars:
+            print "Variable name",var.name
+            print self.sess.run(var)
+            
+
+
+    
+                          
+    def get_optimal_metrics(self,metrics_vector, metric_key="auroc"):
+        """
+        Get the metrics from the epoch where a given metric was at it maximum
+        """
+        best_val = 0
+        for metric in metrics_vector:
+            best_val = max(metric[metric_key],best_val)
+
+        for metric in metrics_vector:
+            #metric here is an OrderedDict of metrics
+            if metric[metric_key]==best_val:
+                return metric
 

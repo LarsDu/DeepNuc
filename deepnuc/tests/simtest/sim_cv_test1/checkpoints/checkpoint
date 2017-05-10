@@ -1,0 +1,6 @@
+model_checkpoint_path: "checkpoints-12000"
+all_model_checkpoint_paths: "checkpoints-8000"
+all_model_checkpoint_paths: "checkpoints-9000"
+all_model_checkpoint_paths: "checkpoints-10000"
+all_model_checkpoint_paths: "checkpoints-11000"
+all_model_checkpoint_paths: "checkpoints-12000"

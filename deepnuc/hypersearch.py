@@ -103,7 +103,7 @@ class GridSearch(object):
         #test_indices = perm_indices[0:int(self.nuc_data.num_records*test_frac)]
         #train_indices = np.setdiff1d(perm_indices,test_indices)
         
-        train_batcher = DataBatcher(self.nuc_data,all_indices,range(self.nuc_data.num_records))
+        train_batcher = DataBatcher(self.nuc_data,all_indices)
         #test_batcher = DataBatcher(self.nuc_data,test_indices)
         test_batcher = None
         self.best_classifier_folder = 'best_model'

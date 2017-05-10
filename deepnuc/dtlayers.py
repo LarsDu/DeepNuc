@@ -276,19 +276,18 @@ class Linear(Layer):
         """
         #Note: some math operations in tensorflow can use overloaded operator notations:
         # see here:http://stackoverflow.com/questions/35094899/tensorflow-operator-overloading
-        W = self.W
-        X = self.X
+
 
         L = tf.ones_like(self.X,dtype=tf.float32)*self.lowest
         H = tf.ones_like(self.X,dtype=tf.float32)*self.highest
-        W_max = tf.maximum(0.,W) # alternatively tf.maximum(0,self.W)
-        W_min = tf.minimum(0.,W)
+        #W_max = tf.maximum(0.,self.W) 
+        #W_min = tf.minimum(0.,self.W)
         
         #L and H should be matrices with the same dims as self.x
         #x_shape = self.x.get_shape()[1] #Note dim0 will be ? if self.x is placeholder
-        Z = tf.matmul(X,self.W)-tf.matmul(L,W_max) - tf.matmul(H,W_min) + 1e-9
+        Z = tf.matmul(self.X,self.W)-tf.matmul(L,W_max) - tf.matmul(H,W_min) + 1e-9
         S =tf.div( Rj,Z)
-        Ri = X*tf.matmul(S,tf.transpose(W))-L*tf.matmul(S,tf.transpose(V))-H*tf.matmul(S,tf.transpose(U))
+        Ri = self.X*tf.matmul(S,tf.transpose(self.W))-L*tf.matmul(S,tf.transpose(V))-H*tf.matmul(S,tf.transpose(U))
         return Ri
 
     
@@ -491,11 +490,12 @@ class Conv2d(Layer):
 
     def relevance_backprop_zbeta(self,Rj):
         #Conv Layer
-        W = self.W
         W_min = tf.minimum(0.,self.W)
         W_max = tf.maximum(0.,self.W)
-      
+        #W_max = tf.minimum(0,self.W)
+        #W_min = tf.maximum(0.,self.W) 
 
+        
         L = tf.zeros_like(self.X,dtype=tf.float32)+self.lowest
         H = tf.zeros_like(self.X,dtype=tf.float32)+self.highest
         zero_bias = tf.zeros_like(self.B,dtype=tf.float32)
@@ -503,7 +503,7 @@ class Conv2d(Layer):
         #These forward ops need to be altered
         Z = self.forward(self.X,self.W,zero_bias)-self.forward(L,W_max,zero_bias)-self.forward(H,W_min,zero_bias)+1e-9
         S = tf.div(Rj,Z)
-        Ri = self.X*self.gradprop(S,W)-H*self.gradprop(S,W_min)-L*self.gradprop(S,W_max)
+        Ri = self.X*self.gradprop(S,self.W)-H*self.gradprop(S,W_min)-L*self.gradprop(S,W_max)
         return Ri
         
 

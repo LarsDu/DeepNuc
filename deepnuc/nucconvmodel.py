@@ -45,7 +45,7 @@ def inferenceA(dna_seq_placeholder,
         l3 = dtl.Linear(r4,num_classes,'linear3' )
         drop_out = dtl.Dropout(l3,keep_prob_placeholder,name="dropout")
         #nn = dtl.Network(x_nuc,[cl1,r1,p1, cl2,r2,p2,flat,l1,r3,l2,r4,l3],bounds=[0.,1.])
-        nn = dtl.Network(x_nuc,[drop_out],bounds=[0.,1.])
+        nn = dtl.Network(x_nuc,[drop_out],bounds=[0.,1.],use_zbeta_first=False)
         
         logits = nn.forward()
         return logits,nn
@@ -90,7 +90,7 @@ def inferenceB(dna_seq_placeholder,keep_prob_placeholder,num_classes):
         l3 = dtl.Linear(r4,num_classes,'linear3' )
         drop_out = dtl.Dropout(l3,keep_prob_placeholder,name="dropout")
         #nn = dtl.Network(x_nuc,[cl1,r1,p1, cl2,r2,p2,flat,l1,r3,l2,r4,l3],bounds=[0.,1.])
-        nn = dtl.Network(x_nuc,[drop_out],bounds=[0.,1.])
+        nn = dtl.Network(x_nuc,[drop_out],bounds=[0.,1.],use_zbeta_first=False)
         logits = nn.forward()
         return logits,nn
 
@@ -168,7 +168,7 @@ def inferenceC(dna_seq_placeholder,keep_prob_placeholder,num_classes):
 
         #Passing the last layer to the Network constructor
         #will automatically initialize Network with every preceding layer
-        nn = dtl.Network(x_nuc,[drop_out],bounds=[0.,1.])
+        nn = dtl.Network(x_nuc,[drop_out],bounds=[0.,1.],use_zbeta_first=False)
         logits = nn.forward()
 
         return logits,nn
@@ -203,7 +203,7 @@ def inferenceD(dna_seq_placeholder,
         r2 = dtl.Relu(l1)
         readout = dtl.Linear(r2,num_classes,'readout')
         dropout = dtl.Dropout(readout,keep_prob_placeholder,name="dropout")
-        nn = dtl.Network(x_nuc,[dropout],bounds=[0.,1.])
+        nn = dtl.Network(x_nuc,[dropout],bounds=[0.,1.],use_zbeta_first=False)
         logits=nn.forward()
         return logits,nn
 

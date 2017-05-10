@@ -1,4 +1,7 @@
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+
 import numpy as np
 
 import os
@@ -8,18 +11,25 @@ sys.path.append(
 import duseqlogo.LogoTools as LogoTools
 
 def main():
-    #nucs = 'ATGCA'
-    #print nucs
-    #lmat = np.asarray([[1.,4,5,2,4],[3,4,5,6,6],[6,5,3,1,1],[8,7,3,4,2]])
-    #lmat = lmat/np.sum(lmat,axis=0)
+    nucs = 'ATGCA'
+    print nucs
+    lmat = np.asarray([[1.,4,5,2,4],[3,4,5,6,6],[6,5,3,1,1],[8,7,3,4,2]])
+    lmat2 = np.asarray([[1.,4,5,2,4],[3,4,5,-1,6],[6,-1.2,3,1,1],[8,7,3,4,2]])
+    lmat2 = lmat2/np.sum(lmat2,axis=0)
 
-    nucs = 'ATCTAGCGTCATGCATGCAG'
-    lmat = np.random.rand(4,20)
-    #nuc_heatmap(nucs,lmat)
-    nuc_height_plot_matplotlib(nucs,np.sum(lmat,axis=0))
+    print lmat2
+    #nucs = 'ATCTAGCGTCATGCATGCAG'
+    
+    nuc_heatmap(nucs,lmat2,'',True)
+
         
     
-def nuc_heatmap(seq,mat,save_fig='',show_plot=False,dims=[.25,2.25],):
+def nuc_heatmap(seq,
+                mat,
+                save_fig='',
+                clims=[-1,1],
+                cmap='bwr_r',
+                dims=[.25,2.25],):
     """
     :param seq: n length nucleotide sequence
     :param mat: 4xn numpy array containing weights
@@ -37,38 +47,38 @@ def nuc_heatmap(seq,mat,save_fig='',show_plot=False,dims=[.25,2.25],):
     ylets = ['T','C','A','G'] #y axis letter labels
     nucs = list(seq)
 
-
     fig,ax = plt.subplots(2,1,sharex=True)
-
 
     fig.set_size_inches((dims[0]*seq_len),dims[1])
     #Plot histogram
-    hmat = np.sum(mat,axis=0)
+    height_mat = np.sum(mat,axis=0)
     #ax[0].autoscale(False)
-    ax[0].bar(range(hmat.shape[0]),hmat,width=1,color='blue')
+    ax[0].bar(range(height_mat.shape[0]),height_mat,width=1,color='green')
     #ax[0].tick_params(axis=u'both',which=u'both',length=0)
     
     #Plot heatmap
     #ax[1].autoscale(False)
-    ax[1].imshow(mat,cmap='Blues')
+    heatmap = ax[1].pcolor(mat,cmap=cmap,vmin=clims[0],vmax=clims[1])
     ax[1].tick_params(axis=u'both',which=u'both',length=0)
-    ax[1].set_xticks(np.arange(0,seq_len))
+    ax[1].set_xticks(np.arange(0.5,seq_len+0.5))
     ax[1].set_xticklabels(nucs)
     ax[1].set_yticks([0.,1,2,3])
     ax[1].set_yticklabels(ylets)
     color_ax_nucs(ax[1])
+    cbar = fig.colorbar(heatmap,ax=ax.ravel().tolist())
+    cbar.set_clim(clims[0],clims[1])
+
     if save_fig != '':
         print "Saving nuc_heatmap to",save_fig
         fig.savefig(save_fig)
-    if show_plot:
-        fig.show()
-
-    return hmat
+    
+    return fig,ax
 
 
 def nuc_height_plot_matplotlib(seq,heights):
 
     '''
+    NOTE: THIS IS DEPRECATED
     There is no font distortion in matplotlib, so this method doesn't quite work
     References:
     https://matplotlib.org/users/text_props.html
@@ -87,7 +97,7 @@ def nuc_height_plot_matplotlib(seq,heights):
     color_dict= {'A':"red",'G':"blue",'T':"lime",'C': "orange"}
     for i,nuc in enumerate(nucs):
         print nuc
-        ax.text(float(i)*1./seq_len, 0, nuc,
+        ax.text(float(i)*1./seq_len, 0, ' '+nuc,
                 ha='left',
                 va='bottom',
                 weight='bold',

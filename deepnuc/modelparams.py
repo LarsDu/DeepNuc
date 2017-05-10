@@ -54,8 +54,7 @@ class ModelParams(object):
                  keep_prob = 0.5,
                  beta1 = 0.9,
                  concat_revcom_input=False,
-                 inference_method_key="inferenceA",
-                 json_file = None):
+                 inference_method_key="inferenceA"):
 
 
         ##Training parameters
@@ -85,7 +84,7 @@ class ModelParams(object):
         #self.k_folds = int(k_folds)
         #self.test_frac = float(test_frac)
         self.populate_param_dict()
-        self.json_file = json_file
+        self.json_file = None
         
         
     @classmethod
@@ -114,10 +113,6 @@ class ModelParams(object):
                     concat_revcom_input,
                     inference_method_key,
                     json_file)
-
-
-
-        
         
     
     def extract_json(self,json_file):

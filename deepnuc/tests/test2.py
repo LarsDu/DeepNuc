@@ -22,12 +22,12 @@ def main():
                           learning_rate=1e-4,
                           batch_size=24,
                           keep_prob=0.5,
-                          beta1=0.9 )
-    #cv_k_folds = 3
-    #cv_test_frac = 0.15
+                          beta1=0.9,
+                          concat_revcom_input=False,
+                          inference_method_key="inferenceA"
+                        )
         
-    ##test_classifier(params,"train")
-
+    #test_classifier(params,"train")
     #test_classifier(params,"relevance")
 
     test_cross_validation(params)
@@ -99,10 +99,10 @@ def test_cross_validation(params):
     if not os.path.exists(cv_save_dir):
         os.makedirs(cv_save_dir)
         
-    
+    print "Test cross-validation"
     logf = cv_save_dir+os.sep+"cv_test2.log"
     sys.stdout = Logger(logf)
-    print "Test cross-validation"
+
 
     fname = "example_data/worm_tss_nib.h5"
     nuc_data = NucHdf5(fname)
@@ -112,16 +112,11 @@ def test_cross_validation(params):
     test_frac = .2
     
 
-    #print nuc_data.pull_index_onehot(5)[1].shape
-
-
-   
     cv = CrossValidator( 
                         params, 
                         nuc_data,
                         cv_save_dir,
                         seed=seed,
-                        nn_method=nucconvmodel.inferenceA,
                         k_folds=3,
                         test_frac=0.15)
     cv.run()

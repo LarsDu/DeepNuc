@@ -21,6 +21,7 @@ class DataBatcher:
             self.indices = range(self.nuc_data.num_records)
         else:
             self.indices = indices
+
         self.num_records = len(self.indices)
 
         
@@ -92,7 +93,7 @@ class DataBatcher:
         #Preallocate
         dna_seq_batch = np.zeros((batch_size,self.seq_len,4))
         labels_batch = np.zeros((batch_size,self.num_classes))
-
+        
         batch_start = self.epoch_tracker.cur_index
         batch_end = batch_start + batch_size
         batch_indices = self.perm_indices[batch_start:batch_end]
@@ -100,15 +101,16 @@ class DataBatcher:
             numeric_label, dna_seq_data = self.nuc_data.pull_index_onehot(pindex)
             dna_seq_batch[bi,:,:] = dna_seq_data #Must be onehot
             if self.use_onehot_labels == True:
-                labels_data = self.numeric_to_onehot_label(numeric_label)#ie: [0 1]
+                labels_data = self.numeric_to_onehot_label(numeric_label)#ie: returns [0 1]
             else:
                 labels_data = numeric_label #ie: 1.2345 for regression
-            labels_batch[bi,:] = labels_data 
+            labels_batch[bi,:] = labels_data
+
+
         return labels_batch,dna_seq_batch
 
 
     def numeric_to_onehot_label(self,numeric_label):
-        
         onehot = np.zeros(self.num_classes,dtype = np.float32)
         onehot[int(numeric_label)] = 1
         return onehot
@@ -120,7 +122,7 @@ class DataBatcher:
         :rtype: numpy array (uint8), numpy array (int)
         """        
         labels_batch,dna_seq_batch= self._pull_batch_no_epoch(batch_size)
-                                                              
+        
         epoch_completed = self.epoch_tracker.increment(batch_size)
         if epoch_completed:
             #print "Starting on epoch",self.train_epoch_tracker.num_epochs

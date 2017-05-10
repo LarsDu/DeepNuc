@@ -234,11 +234,21 @@ class NucDataBedMem(BaseNucData):
         self.bed_reader.close()
 
                 
-class NucFastaMemory(BaseNucData):
-    """ Load a set of fasta files into memory. Labels should be of type
-        classification """
+class NucDataFastaMem(BaseNucData):
+    """
+    Load a set of fasta files into memory. Labels should be of type
+        classification
+
+        fasta_file[0] gets label 0 (negative class for binary classifier)
+        fasta_file[1] gets label 1
+    """
     
     def __init__(self, fasta_files, seq_len):
+
+        if len(fasta_files)!=2:
+            "Error. This object can currently only take a maximum of two fasta files"
+            return None
+        self.num_classes =2 
         self.fasta_files = fasta_files
         self.num_records = 0
         self.seq_len = seq_len
@@ -247,7 +257,8 @@ class NucFastaMemory(BaseNucData):
         self.seq_parser_list = []
 
         #For now, this object must be used with binary classifiers
-        self.num_classes =2 
+
+
         
         #List holding tuples for index ranges corresponding to different labels
         #Example: Fasta1.fa has 3 records. Fasta2.fa has 4. self.bounds =[(0,3),(3,7)]
@@ -262,6 +273,7 @@ class NucFastaMemory(BaseNucData):
             self.num_records += num_recs
             upper_bound = lower_bound+num_recs
             self.bounds.append((lower_bound,upper_bound))
+            lower_bound = upper_bound
             #first_rec = seq_parser.next().seq
             #self.seq_len = len(first_rec)
             #first_nib_seq = nucnibble.nuc_to_uint8_numpy(first_rec)
@@ -269,8 +281,8 @@ class NucFastaMemory(BaseNucData):
 
         #Preallocate array (this makes things memory efficient)
         #self.nib_array = np.zeros((self.num_records,self.nibble_seq_len),dtype='float32')
-        
-  
+        print self.bounds
+          
     def pull_index_nucs(self,index):
         numeric_label = self.label_from_index(index)
         nuc_seq = str(self.seq_parser_list[index].seq)

@@ -131,7 +131,12 @@ class DataBatcher:
 
 
     def pull_batch_by_index(self,index,batch_size):
-        """ Pull a batch from self.indices by index """
+        """ Pull a batch from self.indices by index
+        
+           :returns:
+                    labels_batch: numpy array with shape (batch_size, num_classes)
+                    dna_seq_batch: numpy array with shape (batch_size,seq_len,4)
+        """
         dna_seq_batch = np.zeros((batch_size,self.seq_len,4))
         labels_batch = np.zeros((batch_size,self.num_classes))
         batch_start = index

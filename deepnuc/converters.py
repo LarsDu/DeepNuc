@@ -60,7 +60,7 @@ class ConvertToHdf5:
         the last 4 bits of the last column (uint8) is ignored
         
         """
-        num_total_rows = int(np.sum([reader.num_records for reader in reader_list]))
+        num_total_rows = int(np.sum([reader.get_num_records() for reader in reader_list]))
         num_cols = int(1+ self.seq_len//2 + self.seq_len%2 +4 )
 
 

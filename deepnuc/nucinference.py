@@ -135,20 +135,23 @@ class NucInference(object):
             #Extract step from checkpoint filename
             self.step = int(os.path.basename(ckpt.model_checkpoint_path).split('-')[1])
             self.epoch = int(self.step//self.train_steps_per_epoch)
-            #Load metrics from pickled metrics file
-            metrics_file = self.metrics_dir+os.sep+'metrics-'+str(self.step)+'.p'
-            with open(metrics_file,'r') as of:
-                self.train_metrics_vector = pickle.load(of)
-                if self.test_batcher:
-                    self.test_metrics_vector = pickle.load(of)
-                print "Successfully loaded recorded metrics data from {}".format(metrics_file)
+
+            self.load_pickle_metrics(self.step)
 
             return True
         else:
             print ("Failed to load checkpoint",checkpoint_dir)
             return False
         
-
+    def load_pickle_metrics(self,step):
+        #Load metrics from pickled metrics file
+        metrics_file = self.metrics_dir+os.sep+'metrics-'+str(self.step)+'.p'
+        with open(metrics_file,'r') as of:
+            self.train_metrics_vector = pickle.load(of)
+            if self.test_batcher:
+                self.test_metrics_vector = pickle.load(of)
+                print "Successfully loaded recorded metrics data from {}".\
+                  format(metrics_file)
 
     def train(self):
         """
@@ -483,10 +486,12 @@ class NucInference(object):
 
         :onehot_seq: nx4 onehot representation of a nucleotide sequence
         :label: 1 x num_classes numpy indicator array
+        :returns: nx4 mutation map numpy array
         """
         
         #Mutate the pulled batch sequence.
         #OnehotSeqMutator will produce every SNP for the input sequence
+
         oh_iter = OnehotSeqMutator(onehot_seq.T) #4xn inputs
 
         
@@ -562,9 +567,9 @@ class NucInference(object):
                         amutmap_ds[i,j] = (ps_hat - ps)*max(0,ps_hat,ps)
                         k+=1
 
-            #mutmap_ds is nx4
+            #amutmap_ds is nx4
             
-        return amutmap_ds.T
+        return amutmap_ds
 
 
     def alipanahi_mutmap_from_batcher(self,batcher,index):
@@ -585,12 +590,44 @@ class NucInference(object):
                                                                                    numeric_label)
         self.plot_alipanahi_mutmap(dna_seq_batch[0],labels_batch[0],save_fig)
     
+
+    def avg_alipanahi_mutmap_of_batcher(self,batcher):
+        """Get every mutmap from a given batcher, then average over all
+           mutation maps,
+           Works for num_classes = 2"""
+
+        all_labels, all_dna_seqs = batcher.pull_batch_by_index(0,batcher.num_records)
+
+        amutmaps = [np.zeros((batcher.num_records,self.seq_len,4))]*self.num_classes
         
+        for ci in range(self.num_classes):
+            for ri in range(batcher.num_records):
+                #double check this for errors
+                #amutmap is nx4
+                amutmaps[ci][ri,:,:] = self.alipanahi_mutmap(all_dna_seqs[ri,:,:],all_labels[ri,:])
 
-    
+        return [np.mean(amutmap,axis=0) for amutmap in amutmaps]
 
+    def plot_avg_alipanahi_mutmap_of_batcher(self,batcher):
 
+        amutmaps = self.avg_alipanahi_mutmap_of_batcher(batcher)
+        
+        for i,amap in enumerate(amutmaps):
+            # Note: amax(arr, axis=1) give greatest val for each row (nuc for nx4)
 
+            max_avg_nuc =(amap == np.amax(amap,axis=1,keepdims=True)).astype(np.float32)
+
+            seq = dbt.onehot_to_nuc(max_avg_nuc.T)
+
+            
+            alipanahi_mutmap_dir = self.save_dir + os.sep+'alipanahi_mutmap_dir'
+            if not os.path.exists(alipanahi_mutmap_dir):
+                os.makedirs(alipanahi_mutmap_dir)
+
+            save_fname = alipanahi_mutmap_dir+os.sep+'avg_batcher_mutmap_{}recs_class{}.png'.\
+                                                        format(batcher.num_records,i)
+            nucheatmap.nuc_heatmap(seq,amap.T,save_fig=save_fname)
+        
     ###Mutmap methods###
     # generate every possible snp and measure change in logit
 

@@ -51,10 +51,106 @@ def inferenceA(dna_seq_placeholder,
         return logits,nn
 
 
+def inferenceB(dna_seq_placeholder,
+               keep_prob_placeholder,
+               num_classes,
+               concat_revcom = False):
 
-def inferenceB(dna_seq_placeholder,keep_prob_placeholder,num_classes):
-    with tf.variable_scope("inference_b") as scope:
-        print "Running inferenceB - strided convolutions with wide filters"
+    with tf.variable_scope("inference_b",reuse=None) as scope:
+        print "Running inference B"
+        print "Simple 2 layer linear network with no dropout"
+        x_nuc = dtl.NucInput(dna_seq_placeholder,pad_size,'dna_input',concat_revcom)
+        flat = dtl.Flatten(x_nuc)
+        l1 = dtl.Linear(flat,1024,'linear1')
+        r1 = dtl.Relu(l1)
+        l2 = dtl.Linear(r1,1024,'linear2')
+        r2 = dtl.Relu(l2)
+        nn = dtl.Network(x_nuc,[r2],bounds=[0.,1.],use_zbeta_first=False)
+        logits = nn.forward()
+        return logits,nn 
+        
+        
+
+def inferenceC(dna_seq_placeholder,
+               keep_prob_placeholder,
+               num_classes,
+               concat_revcom = False):
+
+    with tf.variable_scope("inferenceC",reuse=None) as scope:
+        print "Running inference C"
+        x_nuc = dtl.NucInput(dna_seq_placeholder,pad_size,'dna_input',concat_revcom)
+
+        dna_conv_filter_width = 12
+        num_dna_filters = 72
+        pad_size=0
+
+        cl1 = dtl.Conv2d(x_nuc,
+               filter_shape=[1,
+                             dna_conv_filter_width,
+                             4,
+                             num_dna_filters],
+               strides = [1,1,1,1],
+               padding = 'SAME',
+               name='dna_conv1')
+        
+        r1 = dtl.Relu(cl1)
+        p1 = dtl.AvgPool(r1,[1,4],'dna_avg_pool1')
+
+        flat = dtl.Flatten(p1)
+        l1 = dtl.Linear(flat,512,'linear1')
+        r2 = dtl.Relu(l1)
+        l2 = dtl.Linear(r2,512,'linear2')
+        r3 = dtl.Relu(l2)
+        l3 = dtl.Linear(r3,512,'linear3')
+        r4 = dtl.Relu(l3)
+        readout = dtl.Linear(r4,num_classes,'readout')
+        dropout = dtl.Dropout(readout,keep_prob_placeholder,name="dropout")
+        nn = dtl.Network(x_nuc,[dropout],bounds=[0.,1.],use_zbeta_first=False)
+        logits=nn.forward()
+        return logits,nn
+            
+
+def inferenceD(dna_seq_placeholder,
+               keep_prob_placeholder,
+               num_classes,
+               concat_revcom = False):
+    with tf.variable_scope("inference_d",reuse=None) as scope:
+        
+        print "Running inferenceD"
+        dna_conv_filter_width = 20
+        num_dna_filters = 16
+        pad_size=0
+
+        x_nuc = dtl.NucInput(dna_seq_placeholder,pad_size,'dna_input',concat_revcom)
+        cl1 = dtl.Conv2d(x_nuc,
+               filter_shape=[1,
+                             dna_conv_filter_width,
+                             4,
+                             num_dna_filters],
+               strides = [1,1,1,1],
+               padding = 'SAME',
+               name='dna_conv1')
+        
+        r1 = dtl.Relu(cl1)
+        p1 = dtl.AvgPool(r1,[1,4],'dna_avg_pool1')
+
+        flat = dtl.Flatten(p1)
+        l1 = dtl.Linear(flat,32,'linear1')
+        r2 = dtl.Relu(l1)
+        readout = dtl.Linear(r2,num_classes,'readout')
+        dropout = dtl.Dropout(readout,keep_prob_placeholder,name="dropout")
+        nn = dtl.Network(x_nuc,[dropout],bounds=[0.,1.],use_zbeta_first=False)
+        logits=nn.forward()
+        return logits,nn
+
+
+
+
+
+
+def inferenceE(dna_seq_placeholder,keep_prob_placeholder,num_classes):
+    with tf.variable_scope("inference_e") as scope:
+        print "Running inferenceE - strided convolutions with wide filters"
 
         dna_conv_filter_width = 96
         num_dna_filters = 192
@@ -96,12 +192,11 @@ def inferenceB(dna_seq_placeholder,keep_prob_placeholder,num_classes):
 
 
 
-
-def inferenceC(dna_seq_placeholder,keep_prob_placeholder,num_classes):
+def inferenceF(dna_seq_placeholder,keep_prob_placeholder,num_classes):
     """2-strided convolutions with small filters (size 3) """
 
-    with tf.variable_scope("inference_c") as scope:
-        print "Utilizing inferenceC_600bp"
+    with tf.variable_scope("inference_f") as scope:
+        print "Utilizing inferencef_600bp"
 
 
         pad_size = 0
@@ -174,109 +269,16 @@ def inferenceC(dna_seq_placeholder,keep_prob_placeholder,num_classes):
         return logits,nn
 
 
-def inferenceD(dna_seq_placeholder,
-               keep_prob_placeholder,
-               num_classes,
-               concat_revcom = False):
-    with tf.variable_scope("inference_d",reuse=None) as scope:
-        
-        print "Running inferenceD"
-        dna_conv_filter_width = 20
-        num_dna_filters = 16
-        pad_size=0
-
-        x_nuc = dtl.NucInput(dna_seq_placeholder,pad_size,'dna_input',concat_revcom)
-        cl1 = dtl.Conv2d(x_nuc,
-               filter_shape=[1,
-                             dna_conv_filter_width,
-                             4,
-                             num_dna_filters],
-               strides = [1,1,1,1],
-               padding = 'SAME',
-               name='dna_conv1')
-        
-        r1 = dtl.Relu(cl1)
-        p1 = dtl.AvgPool(r1,[1,4],'dna_avg_pool1')
-
-        flat = dtl.Flatten(p1)
-        l1 = dtl.Linear(flat,32,'linear1')
-        r2 = dtl.Relu(l1)
-        readout = dtl.Linear(r2,num_classes,'readout')
-        dropout = dtl.Dropout(readout,keep_prob_placeholder,name="dropout")
-        nn = dtl.Network(x_nuc,[dropout],bounds=[0.,1.],use_zbeta_first=False)
-        logits=nn.forward()
-        return logits,nn
-
-
-
-
 
 #methods_dict is used by modelparams.py
-methods_dict = {"inferenceA":inferenceA,
+methods_dict = {
+               "inferenceA":inferenceA,
                "inferenceB":inferenceB,
                "inferenceC":inferenceC,
-               "inferenceD":inferenceD}
+               "inferenceD":inferenceD,
+               "inferenceE":inferenceE,
+               "inferenceF":inferenceF,
+               }
 
 
 
-'''
-def loss(logits, labels):
-    #cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, labels,
-    #                                                        name='cross_entropy')
-
-
-    #cross_entropy = -tf.reduce_sum(labels*tf.log(tf.clip_by_value(tf.nn.softmax(logits),1e-10,1.0)))
-    #To use scalar summary, first argument needs to be a list
-    #with same shape as cross_entropy
-    #tf.scalar_summary(cross_entropy.op.name, cross_entropy)
-    #cross_entropy = -tf.reduce_sum(labels * tf.log(logits), reduction_indices=[1])
-    loss = tf.reduce_mean(cross_entropy,
-                          name='xentropy_mean')
-    dtl.activation_summary(loss)
-    return loss
-
-def training(loss,learning_rate):
-    #Create a scalar summary for loss function
-    #tf.scalar_summary(loss.op.name, loss)
-    tf.summary.scalar(loss.op.name,loss)
-    # Create the gradient descent optimizer with the given learning rate.
-    optimizer = tf.train.GradientDescentOptimizer(learning_rate)
-    # Create a variable to track the global step.
-    global_step = tf.Variable(0, name='global_step', trainable=False)
-    train_op = optimizer.minimize(loss,global_step = global_step)
-    return train_op
-
-def training_adam(loss,learning_rate):
-    #Create a scalar summary for loss function
-    #tf.scalar_summary(loss.op.name, loss)
-    tf.summary.scalar(loss.op.name,loss)
-    # Create the gradient descent optimizer with the given learning rate.
-    optimizer = tf.train.AdamOptimizer(learning_rate)
-    # Create a variable to track the global step.
-    global_step = tf.Variable(0, name='global_step', trainable=False)
-    train_op = optimizer.minimize(loss,global_step = global_step)
-    return train_op
-
-
-def logits_to_probs(logits):
-    return tf.sigmoid(logits)
-
-def evaluation(logits, labels):
-    """Evaluate the quality of the logits at predicting the label.
-    Args:
-    logits: Logits tensor, float - [batch_size, NUM_CLASSES].
-    labels: Labels tensor, int32 - [batch_size], with values in the
-    range [0, NUM_CLASSES).
-    Returns:
-    A scalar int32 tensor with the number of examples (out of batch_size)
-    that were predicted correctly.
-    """
-    # For a classifier model, we can use the in_top_k Op.
-    # It returns a bool tensor with shape [batch_size] that is true for
-    # the examples where the label is in the top k (here k=1)
-    # of all logits for that example.
-    correct = tf.equal(tf.argmax(logits,1), tf.argmax(labels,1))
-    #correct = tf.nn.in_top_k(logits, tf.cast(labels,tf.int32), 1)
-    # Return the number of true entries.
-    return tf.reduce_sum(tf.cast(correct, tf.int32))
-'''

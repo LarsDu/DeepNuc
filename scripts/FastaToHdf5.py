@@ -44,7 +44,7 @@ def main(argv):
     dinuc_reader = []
     if FLAGS.dinuc_shuffle == True:
         dinuc_reader = [DinucShuffleReader(reader_list)]
-        print "Number of dinuc entries",dinuc_reader[0].num_records
+
 
         
     print "Converting to",FLAGS.output_fname

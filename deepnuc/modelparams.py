@@ -54,7 +54,8 @@ class ModelParams(object):
                  keep_prob = 0.5,
                  beta1 = 0.9,
                  concat_revcom_input=False,
-                 inference_method_key="inferenceA"):
+                 inference_method_key="inferenceA",
+                 json_file=None):
 
 
         ##Training parameters
@@ -84,14 +85,13 @@ class ModelParams(object):
         #self.k_folds = int(k_folds)
         #self.test_frac = float(test_frac)
         self.populate_param_dict()
-        self.json_file = None
+        self.json_file = json_file
         
         
     @classmethod
     def init_json(cls,json_file):
-        json_filename = json_file
-        print "Parsing json file",json_filename
-        with open (json_filename,'r') as jf:
+        print "Parsing json file",json_file
+        with open (json_file,'r') as jf:
             data = json.load(jf)
             num_epochs = int(data['num_epochs'])
             keep_prob = float(data['keep_prob'])
@@ -112,13 +112,14 @@ class ModelParams(object):
                     beta1,
                     concat_revcom_input,
                     inference_method_key,
-                    json_file)
+                    json_file
+                    )
         
     
     def extract_json(self,json_file):
         """Avoid using this in favor of ModelParams.init_json(json_file)"""
-        self.json_filename = os.path.abspath(json_file)
-        self.json_path = os.path.dirname(os.path.abspath(self.json_filename))
+        self.json_file = os.path.abspath(json_file)
+        #self.json_path = os.path.dirname(os.path.abspath(self.json_filename))
         print "Parsing json file",self.json_filename
         with open (self.json_filename,'r') as jf:
             data = json.load(jf)

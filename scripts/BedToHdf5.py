@@ -49,7 +49,7 @@ def main(argv):
     dinuc_reader = []
     if FLAGS.dinuc_shuffle == True:
         dinuc_reader = [DinucShuffleReader(reader_list)]
-        print "Dinuc entries",dinuc_reader[0].num_records
+        
 
     if FLAGS.output_fname=='':
         fbase = os.path.splitext(reader_list[0].name)[0]

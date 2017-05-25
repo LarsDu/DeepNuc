@@ -8,11 +8,15 @@ import dinucshuffle
 from Bio import SeqIO
 import dubiotools as dbt
 
-class Reader:
+class Reader(object):
     def __init__(self):
         #self.type='BaseReader'
         pass
-    
+
+
+    def pull(self):
+        return ([],[])
+        
     def pull_as_onehot(self,batch_size):
         #Calls the pull function to retrieve a list of nucleotide sequences
         #Converts the nucleotides to a [batch_size,4,seq_len] onehot numpy array
@@ -34,7 +38,18 @@ class Reader:
             rec_ids[bi] = rec_ids[bi]+"; dinucleotide_shuffled"
         return nuc_list, rec_ids
             
-    
+    def get_num_records(self):
+        #Very expensive call. Must call pull for entire dataset
+        self.num_records = 0
+        while True:
+            nuc_list,rec_ids = self.pull(1)
+            if nuc_list == [] or rec_ids == []:
+                break
+            else:
+                self.num_records += 1
+        #reset pull counter
+        self.num_pulled = 0
+        
     def close(self):
         print "Closed reader for",self.name
         self.parser.close()
@@ -45,8 +60,17 @@ class BedReader(Reader):
     """
     Sequentially reads entries from a bed file of genomic coordinates and
     outputs nucleotides on each pull(num_examples)
+
+    if start_window is defined, instead of reading coordinates
+    exactly, BedReader will read a window relative to the start coordinate
     """
-    def __init__(self,coord_file,genome_file,chr_sizes_file,seq_len,skip_first=True):
+    def __init__(self,
+                 coord_file,
+                 genome_file,
+                 chr_sizes_file,
+                 seq_len,
+                 skip_first=True,
+                 start_window=None):
         Reader.__init__(self)
         self.coord_file = coord_file
         self.name = self.coord_file
@@ -54,16 +78,18 @@ class BedReader(Reader):
         self.chr_sizes_file = chr_sizes_file
         self.chr_sizes_dict = dbt.chr_sizes_dict(self.chr_sizes_file)
         self.seq_len = seq_len
-        self.index=0
         self.parser = None
-        self.num_records = dbt.check_bed_bounds(self.coord_file,self.chr_sizes_dict) 
+        self.num_pulled= 0
+        #self.num_records = dbt.check_bed_bounds(self.coord_file,self.chr_sizes_dict)
         self.skip_first = skip_first
-        #self.genome_idx = pysam.FastaFile(self.genome_file)
-        #self.open()
-        #print "BedReader object is open. Remember to close by calling obj.close()"
+
+        
+        self.start_window = start_window
+
+
         
     def open(self):
-        print "Opening BedFile",self.coord_file,"with",self.num_records,"records"
+        print "Opening BedFile",self.coord_file
         print "Opening genome file",self.genome_file
         self.genome_idx = pysam.FastaFile(self.genome_file)
         self.parser = open(self.coord_file,'r')
@@ -73,45 +99,62 @@ class BedReader(Reader):
     def close(self):
         self.parser.close()
         
-        
+    '''
     def pull_batch_eval(self,num_examples):
         #This interface method is used to make this class
         #a compatible drop in for InputCollection in certain cases
         return pull(num_examples)
-       
-    def pull(self,num_examples):
+    '''
         
+    def pull(self,num_examples):
+        #Returns empty lists on failure
         nuc_list=[]
         rec_ids=[]
         #BedReader
         """Pull sequence from genome in sequential order"""
-        #Correct pull size 
-        if self.index+num_examples>self.num_records:
-            num_examples = num_examples - ((self.index+num_examples) - self.num_records)
-            print "Pulling only",num_examples,"examples at the end of file",self.coord_file
 
         for i in range(num_examples):
             line= self.parser.readline().strip().split()
-            contig,start_str,end_str = line[:3]
-            contig = str(contig)
-            start = int(start_str)
-            end= int(end_str)
+            if line != []:
+                contig,start_str,end_str = line[:3]
+                contig = str(contig)
+                real_start = int(start_str)
+                start = real_start
+                end= int(end_str)
 
-            #Check start and end bounds
-            if (start >= 0) and (end <= int(self.chr_sizes_dict[contig])):
-                #Check specified seq_len
-                if (end-start)==self.seq_len:
-                    nuc_list.append(self.genome_idx.fetch(contig,start,end))
-                    rec_id = [contig,':',start_str,'-',end_str]
-                    rec_ids.append(''.join(rec_id))
+                if self.start_window:
+                    #Use a window around the start position instead
+                    start = real_start+self.start_window[0]
+                    end = real_start+self.start_window[1]
+
+                #Check start and end bounds
+                if (start >= 0) and (end <= int(self.chr_sizes_dict[contig])):
+                    #Check specified seq_len
+                    if (end-start)==self.seq_len:
+                        seq= self.genome_idx.fetch(contig,start,end)
+                        #Check pulled sequence
+                        if len(seq) == self.seq_len:
+                            nuc_list.append(seq)
+                            rec_id = [contig,':',start_str,'-',end_str]
+                            rec_ids.append(''.join(rec_id))
+                            self.num_pulled += 1
+                        else:
+                            print "Error! record {}:{}-{} did not yield correct sequence length {}".\
+                                             format(contig,start_str,end_str,self.seq_len)
+                            print "on pysam pull."
+
+                    else:
+                        print "Record",(contig,start,end),"does not have seq_len",self.seq_len
                 else:
-                    print "Record",(contig,start,end),"does not have seq_len",self.seq_len
-                self.index += 1
-            else:
-                print (contig,start,end),"out of bounds."
+                    print (contig,start,end),"out of bounds."
                 
-                
-        #print self.index
+        actual_num_examples = len(nuc_list)
+        if actual_num_examples != num_examples:
+            print "Reached end of file and only pulling {} from file {}".\
+                 format(actual_num_examples,self.coord_file)
+            print "Pulled {} records from file {}".\
+                       format(self.num_pulled,self.coord_file)
+
         return nuc_list,rec_ids
         
         
@@ -127,14 +170,15 @@ class FastaReader(Reader):
         self.fasta_file = fasta_file
         self.name = self.fasta_file
         self.seq_len = seq_len
-        self.num_records = len(SeqIO.index(self.fasta_file,"fasta"))
-        self.index = 0
+        #self.num_records = len(SeqIO.index(self.fasta_file,"fasta"))
+        self.num_pulled = 0 #Determine number of records by pulls
+        
         #self.open()
         
         
     def open(self):
         #self.num_records = len(SeqIO.to_dict(SeqIO.parse(self.fasta_file,"fasta")))
-        print "Opening FastaReader with",self.num_records,"records"
+        print "Opening FastaReader {}".format(self.fasta_file)
         self.parser = SeqIO.parse(self.fasta_file,"fasta")
         
         
@@ -143,36 +187,38 @@ class FastaReader(Reader):
         return pull(num_examples)
         
     def pull(self,num_examples):
-        if self.index >= self.num_records:
-            print "Error! No more records to pull"
-            print "Num records:",self.num_records
-            print "Index:",self.index 
+        #FastaReader
+        #Returns empty lists on failure
         nuc_list = []
         rec_ids =[]
-        #FastaReader
-        """Pull fasta records in sequential order"""
-        #Correct pull size 
-        if self.index+num_examples>self.num_records:
-            num_examples = num_examples - ((self.index+num_records) - self.num_records)
-            print "Pulling only",num_examples,"examples at the end of file",self.fasta_file
 
+        """Pull fasta records in sequential order"""
+                
         for i in range(num_examples):
             try:
                 seq_obj = self.parser.next()
                 nuc_seq = str(seq_obj.seq)
                 rec_id = seq_obj.id
 
+                if len(nuc_seq) == self.seq_len:
+                    nuc_list.append(nuc_seq)
+                    rec_ids.append(rec_id)
+                    self.num_pulled += 1
+                else:
+                    print("Error. Example",
+                        str(i)," sequence length does not match",str(self.seq_len) )
+            
             except StopIteration:
-                print "Failure in FastaReader pull at", self.index
-            if len(nuc_seq) == self.seq_len:
-                nuc_list.append(nuc_seq)
-                rec_ids.append(rec_id)
-            else:
-                print("Error. Example",
-                      str(i)," sequence length",
-                      str(len(nuc_seq)), "does not match",str(self.seq_len) )
+                print "Failure in FastaReader pull at", self.num_pulled
                 
-            self.index +=1
+
+        actual_num_examples = len(nuc_list)
+        if actual_num_examples != num_examples:
+            print "Reached end of file and only pulling {} from file {}".\
+                                   format(actual_num_examples,self.fasta_file)
+
+            print "Pulled {} records from fasta file {}".\
+                       format(self.num_pulled,self.fasta_file)
 
         return nuc_list,rec_ids
 
@@ -192,33 +238,39 @@ class DinucShuffleReader(Reader):
         #Note: copy.copy copies will have refs to objects in the copied
         # object, whereas copy.deepcopy will straight copy these objects
         self.reader_list = [copy.copy(reader) for reader in reader_list]
-        self.num_records_list = [reader.num_records for reader in self.reader_list]
-        self.num_records = np.sum(self.num_records_list)
+        
         self.reader_index = 0 #Index for reader currently being pulled from 
         self.seq_len = self.reader_list[0].seq_len
         self.name = "dinuc_shuffled"
+        self.num_pulled = 0
         
     def save_as_fasta(self,output_file):
         print "Saving dinucleotide shuffled entries in file",output_file
         self.reader_index=0
         with open(output_file,'w') as of:
-            for i in range(self.num_records):
+            while(True):
                 dinuc_list,rec_ids = self.pull(1)
-                of.write(">{}\n".format(rec_ids[0]))
-                of.write(dinuc_list[0]+"\n")
+                if not (dinuc_list == [] or dinuc_list == None or
+                        rec_ids == [] or rec_ids == None):
+                    of.write(">{}\n".format(rec_ids[0]))
+                    of.write(dinuc_list[0]+"\n")
+                else:
+                    break
         self.reader_index=0
         
     def pull(self,batch_size):
+        #Returns empty lists on final pull
         cur_reader = self.reader_list[self.reader_index]
         dinuc_list,rec_ids = cur_reader.pull_dinuc_shuffled(batch_size)
-        #self.record_index += batch_size
-        #Go to next reader if next batch exceeds num records in cur reader
-        if (cur_reader.index)>= cur_reader.num_records:
+        #Go to next reader if pull fails
+        if dinuc_list == [] or rec_ids == []:
             self.reader_index += 1
+        else:
+            self.num_pulled += len(dinuc_list)
         return dinuc_list,rec_ids
 
     def open(self):
-        print "Opening DinucReader with",self.num_records,"records"
+        print "Opening DinucReader"
         for reader in self.reader_list:
             reader.open()
     def close(self):

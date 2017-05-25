@@ -8,6 +8,7 @@ import dubiotools as dbt
 from readers import * #Bed,Fasta,DinucShuffleReader
 
 
+
 class BaseNucData():
     """
     Abstract class for holding nuc data
@@ -169,24 +170,41 @@ class NucDataBedMem(BaseNucData):
                  seq_len,
                  skip_first=True,
                  gen_dinuc_shuffle=True,
-                 neg_fasta_file=None):
+                 neg_fasta_file=None,
+                 start_window=None):
 
         """
 
         If neg_fasta_file is specified, no dinucleotide shuffled fasta file will be generated
         regardless of whether gen_dinuc_shuffle flag is set to True.
-                 
+
+        If start_window is specified, instead of extracting  range [start, end) sequences,
+        BedReader will extract [start+start_window[0],start+start_window[1])
+        
         """
+
         self.seq_len = seq_len
-        self.pos_reader = BedReader(bed_file,genome_file,chr_sizes_file,seq_len,skip_first=True)
+        self.start_window=start_window
+        if self.start_window:
+            print "Using start window {} around start coordinates of .bed file".\
+                                       format(start_window)
+            
+        self.pos_reader = BedReader(bed_file,
+                                    genome_file,
+                                    chr_sizes_file,
+                                    seq_len,
+                                    skip_first=True,
+                                    start_window=self.start_window)
+
         self.pos_reader.open()
         #For now, this object must be used with binary classifiers
         self.num_classes =2 
-        
-        
+
+        self.neg_reader = None
         if neg_fasta_file:
             self.neg_reader = FastaReader(neg_fasta_file,self.seq_len)
             self.neg_reader.open()
+            
         elif gen_dinuc_shuffle:
             output_fname = os.path.splitext(self.pos_reader.name)[0]+'_dinuc_shuffle.fa'
             if not os.path.exists(output_fname):
@@ -204,21 +222,44 @@ class NucDataBedMem(BaseNucData):
 
             
         #Create fasta file to record entries in DinucShuffleReader
-            
-        self.num_records = self.pos_reader.num_records + self.neg_reader.num_records
-        
-        #Read all sequences into memory
-            
-        all_pulls = [self.pos_reader.pull(1) for _ in range(self.pos_reader.num_records)]+\
-                    [self.neg_reader.pull(1) for _ in range(self.neg_reader.num_records)]
+
+        all_pulls = []
+
+        ###Read all sequences into memory
+
+        #Must have negative reader
+        assert self.neg_reader
+        readers = [self.pos_reader,self.neg_reader]
+
+
+        for reader in readers:
+            while True:
+                cur_pull =reader.pull(1)
+                if cur_pull[0] != [] and cur_pull[1] != []:
+                    all_pulls.append(cur_pull)
+                else:
+                    break
 
         
+
+        print "Num positive examples pulled: {}".format(self.pos_reader.num_pulled)
+        print "Num negative examples pulled: {}".format(self.neg_reader.num_pulled)
+        assert self.pos_reader.num_pulled > 0
+        assert self.neg_reader.num_pulled > 0
+
+        '''
+        for i in zip(*all_pulls)[0]:
+            try:
+                print i[0][0]
+            except IndexError:
+                print i
+
+        '''
         self.nuc_seqs = [i[0] for i in zip(*all_pulls)[0]]
-    
-        self.labels = [1]*self.pos_reader.num_records + [0]*self.neg_reader.num_records
+            
+        self.labels = [1]*self.pos_reader.num_pulled + [0]*self.neg_reader.num_pulled
+        self.num_records = len(self.nuc_seqs)
         
-        #print self.nuc_seqs[0]
-        #print self.nuc_seqs[2]
         self.pos_reader.close()
         self.neg_reader.close()
 

@@ -10,6 +10,7 @@ import pprint
 import numpy as np
 import os
 import sys
+import glob
 
 import dubiotools as dbt
 from onehotseqmutator import OnehotSeqMutator
@@ -116,11 +117,21 @@ class NucInference(object):
         if not os.path.exists(self.metrics_dir):
             os.makedirs(self.metrics_dir)
 
+        
         metrics_file = self.metrics_dir+os.sep+'metrics-'+str(self.step)+'.p'
         with open(metrics_file,'w') as of:
             pickle.dump(self.train_metrics_vector,of)
             pickle.dump(self.test_metrics_vector,of)
+
+        #Clean the metrics directory of old pickle files (to save storage space)
+        flist = glob.glob('*.p')
+        flist_steps = [int(f.strip('.p').split('-')[1]) for f in flist]
+        max_metric = max(flist_steps)
         
+        for f in flist:
+            if max_metric != int(f.strip('.p').split('-')[1]):
+                os.remove(f)
+
         
     def load(self,checkpoint_dir):
         '''
@@ -230,7 +241,7 @@ class NucInference(object):
                         self.print_metrics(test_metrics)
 
                     print "Saving checkpoints"
-                    self.save()
+                    #self.save()
                  
                 if (self.epoch == self.num_epochs and self.step % self.train_steps_per_epoch ==0):
                     # This is the final step and epoch, save metrics

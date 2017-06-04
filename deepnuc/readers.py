@@ -70,7 +70,31 @@ class BedReader(Reader):
                  chr_sizes_file,
                  seq_len,
                  skip_first=True,
-                 start_window=None):
+                 start_window=None,
+                 pull_limit = -1,
+                 filter_by_len = False
+                 ):
+        """Read a bed file with many options for preprocessing
+
+        :param coord_file: '.bed' file
+        :param genome_file: '.fa' file with whole genome 
+        :param chr_sizes_file: chromosome sizes file corresponding to aforementioned genome 
+        :param seq_len: The sequence length to extract from the start coord.
+                        This also represents the maximum length that can be pulled.
+                        bed file lines shorter than this value will not be pulled. 
+        :param skip_first: Skip the first line of the file (the header line)
+        :param start_window: A tuple (ie: (-100,100). If specified, extract this
+                             range from around the start window instead of using
+                             both start and end 
+        :param pull_limit: If specified, only extract the specified number of lines
+                             (excluding header if skip_first is set to True).
+                              Pull all if set to -1
+        :param filter_by_len: If True, only pull from lines where
+                              end-start > self.seq_len
+        :returns: a BedReader object
+        :rtype: BedReader type object
+        """
+        
         Reader.__init__(self)
         self.coord_file = coord_file
         self.name = self.coord_file
@@ -82,11 +106,10 @@ class BedReader(Reader):
         self.num_pulled= 0
         #self.num_records = dbt.check_bed_bounds(self.coord_file,self.chr_sizes_dict)
         self.skip_first = skip_first
-
-        
         self.start_window = start_window
-
-
+        self.pull_limit = pull_limit
+        self.filter_by_len = filter_by_len
+        
         
     def open(self):
         print "Opening BedFile",self.coord_file
@@ -107,6 +130,8 @@ class BedReader(Reader):
     '''
         
     def pull(self,num_examples):
+        if self.pull_limit > -1 and self.num_pulled > self.pull_limit:
+            return [],[]
         #Returns empty lists on failure
         nuc_list=[]
         rec_ids=[]
@@ -121,12 +146,20 @@ class BedReader(Reader):
                 real_start = int(start_str)
                 start = real_start
                 end= int(end_str)
-
+                real_len = end-real_start 
+                if self.filter_by_len and real_len < self.seq_len:
+                    #Recursively call this method until an acceptably long sequence is
+                    #pulled.
+                    #self.num_pulled will only get pulled if successful.
+                    return self.pull(num_examples)
+                
                 if self.start_window:
                     #Use a window around the start position instead
                     start = real_start+self.start_window[0]
                     end = real_start+self.start_window[1]
-
+                
+                
+                
                 #Check start and end bounds
                 if (start >= 0) and (end <= int(self.chr_sizes_dict[contig])):
                     #Check specified seq_len
@@ -163,7 +196,7 @@ class FastaReader(Reader):
     Sequentially reads records from a fasta file and outputs nucleotides on each pull
     """
     
-    def __init__(self,fasta_file,seq_len):
+    def __init__(self,fasta_file,seq_len,pull_limit=-1):
         Reader.__init__(self)
         if os.path.splitext(fasta_file)[-1] not in ['.fa','.fasta']:
             print "File",fasta_file,"should have \'.fa\' or \'.fasta\' extension."
@@ -172,7 +205,7 @@ class FastaReader(Reader):
         self.seq_len = seq_len
         #self.num_records = len(SeqIO.index(self.fasta_file,"fasta"))
         self.num_pulled = 0 #Determine number of records by pulls
-        
+        self.pull_limit = pull_limit
         #self.open()
         
         
@@ -187,6 +220,9 @@ class FastaReader(Reader):
         return pull(num_examples)
         
     def pull(self,num_examples):
+        if self.pull_limit > -1 and self.num_pulled > self.pull_limit:
+            return [],[]
+   
         #FastaReader
         #Returns empty lists on failure
         nuc_list = []

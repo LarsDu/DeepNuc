@@ -170,7 +170,7 @@ class NucDataBedMem(BaseNucData):
                  seq_len,
                  skip_first=True,
                  gen_dinuc_shuffle=True,
-                 neg_fasta_file=None,
+                 neg_data_reader=None,
                  start_window=None):
 
         """
@@ -180,6 +180,9 @@ class NucDataBedMem(BaseNucData):
 
         If start_window is specified, instead of extracting  range [start, end) sequences,
         BedReader will extract [start+start_window[0],start+start_window[1])
+
+
+        Note: labels are assigned 1 for positive class and 0
         
         """
 
@@ -200,11 +203,10 @@ class NucDataBedMem(BaseNucData):
         #For now, this object must be used with binary classifiers
         self.num_classes =2 
 
-        self.neg_reader = None
-        if neg_fasta_file:
-            self.neg_reader = FastaReader(neg_fasta_file,self.seq_len)
+
+        if neg_data_reader != None:
+            self.neg_reader = neg_data_reader
             self.neg_reader.open()
-            
         elif gen_dinuc_shuffle:
             output_fname = os.path.splitext(self.pos_reader.name)[0]+'_dinuc_shuffle.fa'
             if not os.path.exists(output_fname):
@@ -217,11 +219,14 @@ class NucDataBedMem(BaseNucData):
             else:
                 print "{0} already found. Will use {0} as dinucleotide shuffled dataset".\
                                                                     format(output_fname)
+            #Create fasta file to record entries in DinucShuffleReader
             self.neg_reader = FastaReader(output_fname,self.seq_len)
             self.neg_reader.open()
+        else:
+            print "Must specify either gen_dinuc_shuffle=True or explicitly provide a neg_data_reader"
 
             
-        #Create fasta file to record entries in DinucShuffleReader
+
 
         all_pulls = []
 

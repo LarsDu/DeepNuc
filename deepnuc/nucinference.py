@@ -126,7 +126,7 @@ class NucInference(object):
         #Clean the metrics directory of old pickle files (to save storage space)
         flist = glob.glob('*.p')
         flist_steps = [int(f.strip('.p').split('-')[1]) for f in flist]
-        max_metric = max(flist_steps)
+        max_metric = max(flist_steps+[0])
         
         for f in flist:
             if max_metric != int(f.strip('.p').split('-')[1]):
@@ -590,7 +590,7 @@ class NucInference(object):
     def plot_alipanahi_mutmap(self,onehot_seq,label,save_fig):
         seq = dbt.onehot_to_nuc(onehot_seq.T)
         amut_onehot = self.alipanahi_mutmap(onehot_seq,label)
-        nucheatmap.nuc_heatmap(seq,amut_onehot,save_fig=save_fig)
+        nucheatmap.nuc_heatmap(seq,amut_onehot.T,save_fig=save_fig)
 
     def plot_alipanahi_mutmap_from_batcher(self,batcher,index):
         batch_size = 1

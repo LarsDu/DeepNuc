@@ -28,6 +28,9 @@ class GridSearch(object):
             os.makedirs(self.save_dir)
 
         self.best_model_dir = self.save_dir+os.sep+'best_model'
+        if not os.path.exists(self.best_model_dir):
+            os.makedirs(self.best_model_dir)
+
         self.fig_title_prefix = fig_title_prefix
         
         self.seed = seed #For train/test cross validation splits

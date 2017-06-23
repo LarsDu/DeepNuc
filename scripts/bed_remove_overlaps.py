@@ -18,18 +18,30 @@ def main(argv):
     assert coords_overlap(('chr1',40,50),('chr1',30,60)) == True
     assert coords_overlap(('chr1',40,50),('chr1',30,39)) == False
 
-    remove_overlaps(argv[1])
+    bed_file = argv[1]
+
+    if argv[2] and argv[3]:
+        start_window = [int(argv[2]),int(argv[3])]
+    else:
+        start_window = None
     
-def remove_overlaps(bed_file):
+    remove_overlaps(bed_file,start_window)
+    
+    
+def remove_overlaps(bed_file,start_window=None):
     """
     Output a bedfile without overlaps
     If keep_first is True, only keep the first example visted.
     Else select randomly which overlapping segment is to be retained.
+
+    If start window is specified, instead of using bed file start and end columns,
+    this function will use start+start_window[0] and start+start_window[1]
     """
     if os.path.splitext(bed_file)[1] != '.bed':
         print "File must have extension \'.bed\'!"
         return 
 
+    print "Start window is specified as {}".format(start_window)
      
     out_file = "{}_no_overlaps.bed".format(os.path.splitext(bed_file)[0])
 
@@ -42,6 +54,11 @@ def remove_overlaps(bed_file):
                 of.write(l)
             else:
                 coord = l.strip('\n').split('\t')[:3]
+                if start_window and len(start_window)==2:
+                    new_start = str(int(coord[1]) + start_window[0])
+                    new_end = str(int(coord[1]) + start_window[1])
+                    coord = [coord[0],new_start,new_end]
+                
                 orig_count += 1
                 if not coords_overlap(prev_coord,coord):
                     '''

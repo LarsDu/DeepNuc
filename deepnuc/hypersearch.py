@@ -19,6 +19,21 @@ class GridSearch(object):
                  k_folds = 3,
                  test_frac =0.20,
                  fig_title_prefix=''):
+
+        """ FIXME! briefly describe function
+
+        :param grid_params_obj: a modelparams.gridparams object 
+        :param nuc_data: 
+        :param gs_save_dir: 
+        :param seed: 
+        :param k_folds: 
+        :param test_frac: 
+        :param fig_title_prefix: 
+        :returns: 
+        :rtype: 
+
+        """
+        
         
         self.nuc_data = nuc_data
         self.grid_params = grid_params_obj

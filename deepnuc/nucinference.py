@@ -619,7 +619,7 @@ class NucInference(object):
 
         return [np.mean(amutmap,axis=0) for amutmap in amutmaps]
 
-    def plot_avg_alipanahi_mutmap_of_batcher(self,batcher):
+    def plot_avg_alipanahi_mutmap_of_batcher(self,batcher,fsuffix=''):
 
         amutmaps = self.avg_alipanahi_mutmap_of_batcher(batcher)
         
@@ -635,8 +635,8 @@ class NucInference(object):
             if not os.path.exists(alipanahi_mutmap_dir):
                 os.makedirs(alipanahi_mutmap_dir)
 
-            save_fname = alipanahi_mutmap_dir+os.sep+'avg_batcher_mutmap_{}recs_class{}.png'.\
-                                                        format(batcher.num_records,i)
+            save_fname = alipanahi_mutmap_dir+os.sep+'avg_batcher_mutmap_{}recs_class{}{}.png'.\
+                                                        format(batcher.num_records,i,fsuffix)
             nucheatmap.nuc_heatmap(seq,amap.T,save_fig=save_fname)
         
     ###Mutmap methods###

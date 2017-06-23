@@ -42,6 +42,33 @@ class NucBinaryClassifier(NucInference):
                  nn_method_key="inferenceA",
                  pos_index=1):
 
+        """NucBinaryClassifier encapsulates training and data
+        evaluation for 
+                        
+
+        :param sess: tf.Session() object
+        :param train_batcher: DataBatcher object for training set
+        :param test_batcher: DataBatcher object for test set
+        :param num_epochs: Number of epoch cycles to perform training
+        :param learning_rate: Learning rate
+        :param batch_size: Mini-batch pull size
+        :param seq_len: Sequence length
+        :param save_dir: Root save directory for binary classification model
+        :param keep_prob: Probability of keeping weight for dropout
+        regularization    
+        :param beta1: Beta1 parameter for AdamOptimizer
+        :param concat_revcom_input: If true, concatenate reverse
+        complement of nucleotide sequence to input vector
+        :param nn_method_key: Dictionary key for inference
+        method found in nucconvmodels.py file. Determines which model
+        to use. Example: "inferenceA" will run nucconvmodels.inferenceA
+        :param pos_index: The index to use for the positive class
+        (defaults to 1)
+        :returns: a NucBinaryClassifier object
+        :rtype: NucBinaryClassifier
+
+        """
+
 
         super(NucBinaryClassifier, self).__init__(sess,
                                     train_batcher,
@@ -55,7 +82,7 @@ class NucBinaryClassifier(NucInference):
                                     beta1,
                                     concat_revcom_input,
                                     nn_method_key="inferenceA")
-
+        
 
         if self.train_batcher.num_classes != 2:
             print "Error, more than two classes detected in train batcher"

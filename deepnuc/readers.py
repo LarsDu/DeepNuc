@@ -221,6 +221,7 @@ class FastaReader(Reader):
         
     def pull(self,num_examples):
         if self.pull_limit > -1 and self.num_pulled > self.pull_limit:
+            print "Reached pull limit after {} pulls".format(self.num_pulled)
             return [],[]
    
         #FastaReader
@@ -229,7 +230,7 @@ class FastaReader(Reader):
         rec_ids =[]
 
         """Pull fasta records in sequential order"""
-                
+
         for i in range(num_examples):
             try:
                 seq_obj = self.parser.next()
@@ -241,8 +242,8 @@ class FastaReader(Reader):
                     rec_ids.append(rec_id)
                     self.num_pulled += 1
                 else:
-                    print("Error. Example",
-                        str(i)," sequence length does not match",str(self.seq_len) )
+                    print "Error. {} sequence length does not match {}."\
+                                           .format(rec_id,self.seq_len)
             
             except StopIteration:
                 print "Failure in FastaReader pull at", self.num_pulled

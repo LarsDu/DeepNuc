@@ -153,16 +153,17 @@ class NucDataBedMem(BaseNucData):
     Given a bed file, genome fasta file, and chromsome sizes file
     
     
-    Optional: Generate a dinucleotide shuffled version of the input bed file
-              and save as a fasta file
-    Optional: Pass two fasta files. One is 
+    Optional: Generate a dinucleotide shuffled version of the input
+    bed file and save as a fasta file
+                  
     Note:
     Nucleotide information and labels are stored in two lists.
     All nucleotide data is stored in memory.
     Nucleotide data is stored as a string (not as a nibble array).
     
     """
-                
+
+      
     def __init__(self,
                  bed_file,
                  genome_file,
@@ -171,19 +172,45 @@ class NucDataBedMem(BaseNucData):
                  skip_first=True,
                  gen_dinuc_shuffle=True,
                  neg_data_reader=None,
-                 start_window=None):
-
+                 start_window=None,
+                 file_suffix=''):
         """
-
-        If neg_fasta_file is specified, no dinucleotide shuffled fasta file will be generated
-        regardless of whether gen_dinuc_shuffle flag is set to True.
-
-        If start_window is specified, instead of extracting  range [start, end) sequences,
-        BedReader will extract [start+start_window[0],start+start_window[1])
-
+        NucData class for pulling data from bed files.
 
         Note: labels are assigned 1 for positive class and 0
-        
+    
+        :param bed_file: Input bed_file
+        :param genome_file: A fasta file of the genome corresponding to the \
+        bed_file. All chromosomes must be in a single file. If the user has a\
+         genome partitioned into separate fasta files for each chromosome, it\
+          is recommended to use the Unix cat command to concatenate all files\
+           into a single genomic fasta file.
+        :param chr_sizes_file: Chromosome sizes file for the \
+        genome_file. This can be generated using UCSCs fetchChromSizes script.
+        :param seq_len: The sequence length
+        :param skip_first: If true, skip the first line of the input \
+        bed file.
+        :param gen_dinuc_shuffle: If set to True (and neg_data_reader\
+         is set to None), a fasta file will be generated with the\
+        dinucleotide shuffled versions of the entries from the input\
+        bed file.
+        :param neg_data_reader: A BedReader or FastReader object (from\
+        readers.py). If neg_data_reader is specified, no dinucleotide\
+        shuffled fasta file will be generated regardless if\
+        gen_dinuc_shuffle flag is set to True.
+        :param start_window: A list or tuple of two number. If these\
+        values are specified, this NucData object will only pull items\
+        within a specified window flanking the start coordinates of a\
+        bed file (ignoring the end coordinates altogether). Defaults\
+        to None. Example: If start_window is specified, instead of\
+        extracting range [start, end) sequences, BedReader will\
+        extract [start+start_window[0],start+start_window[1])
+        :param file_suffix: A suffix to append to generated\
+        dinucleotide shuffled files. Useful for generating different\
+        sets of dinucleotide shuffled files.
+        :returns:
+        :rtype: 
+
         """
 
         self.seq_len = seq_len
@@ -203,12 +230,15 @@ class NucDataBedMem(BaseNucData):
         #For now, this object must be used with binary classifiers
         self.num_classes =2 
 
+        self.file_suffix=file_suffix
 
         if neg_data_reader != None:
             self.neg_reader = neg_data_reader
             self.neg_reader.open()
         elif gen_dinuc_shuffle:
-            output_fname = os.path.splitext(self.pos_reader.name)[0]+'_dinuc_shuffle.fa'
+            
+            output_fname = os.path.splitext(self.pos_reader.name)[0]+'_dinuc_shuffle'+\
+                                                 self.file_suffix+'.fa'
             if not os.path.exists(output_fname):
                 #Dinuc entries from pos_reader and save to fasta file with
                 # name output_fname
@@ -226,7 +256,6 @@ class NucDataBedMem(BaseNucData):
             print "Must specify either gen_dinuc_shuffle=True or explicitly provide a neg_data_reader"
 
             
-
 
         all_pulls = []
 
@@ -282,11 +311,14 @@ class NucDataBedMem(BaseNucData):
                 
 class NucDataFastaMem(BaseNucData):
     """
-    Load a set of fasta files into memory. Labels should be of type
-        classification
+    Load a set of fasta files into memory.
+    This class may be deprecated in the future.
 
         fasta_file[0] gets label 0 (negative class for binary classifier)
         fasta_file[1] gets label 1
+
+        :fasta_files: List of fasta files
+        :seq_len: Sequence length
     """
     
     def __init__(self, fasta_files, seq_len):

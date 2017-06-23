@@ -56,9 +56,29 @@ class ModelParams(object):
                  concat_revcom_input=False,
                  inference_method_key="inferenceA",
                  json_file=None):
+        """A class for encapsulating model parameters
+
+        :param seq_len: Sequence length
+        :param num_epochs: Number of epochs
+        :param learning_rate: Learning rate
+        :param batch_size: Mini-batch pull size
+        :param keep_prob: Probability of keeping weight for dropout
+        regularization        
+        :param beta1: Beta1 parameter for AdamOptimizer
+        :param concat_revcom_input: If true, concatenate reverse
+        complement of nucleotide sequence to input vector
+        :param inference_method_key: Dictionary key for inference
+        method found in nucconvmodels.py file. Determines which model
+        to use. Example: "inferenceA" will run nucconvmodels.inferenceA
+        :returns: A ModelParams object
+        :rtype: ModelParams
+
+        """
 
 
         ##Training parameters
+        
+        
         '''
         if training_file == '' or training_file == 'None':
             self.training_file = None
@@ -85,11 +105,17 @@ class ModelParams(object):
         #self.k_folds = int(k_folds)
         #self.test_frac = float(test_frac)
         self.populate_param_dict()
-        self.json_file = json_file
+
         
         
     @classmethod
     def init_json(cls,json_file):
+        """
+        Initialize ModelParams object from a json_file
+        :param json_file: A json file with the appropriate keys for a
+        ModelParams object
+
+        """
         print "Parsing json file",json_file
         with open (json_file,'r') as jf:
             data = json.load(jf)

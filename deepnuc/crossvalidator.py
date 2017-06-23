@@ -25,8 +25,6 @@ class CrossValidator(object):
                  k_folds=3,
                  test_frac=0.15):
 
-
-        
         """
         Perform k-fold cross validation on a dataset. nuc_data will be divided into
         k training and testing sets.
@@ -34,7 +32,6 @@ class CrossValidator(object):
         :param nuc_data: An object derived from BaseNucData
         :param cv_save_dir: Save k models under this directory
         :param seed: An integer used to seed random shuffling 
-        :param nn_method_key: string name of method from nucconvmodels.py
         :param k_folds: Number of k-folds 
         :param test_frac: Fraction of nuc_data to be used for cross validation 
 
@@ -164,6 +161,9 @@ class CrossValidator(object):
       
                     
     def print_results(self):
+        """
+        Print cross-validation results
+        """
         print "Cross validation parameters:"
         print "Training set size:\t",self.train_size
         print "Testing set size:\t",self.test_size
@@ -196,6 +196,15 @@ class CrossValidator(object):
     
                     
     def calc_avg_k_metrics(self):
+        """Calculate the average training and test metrics of 
+
+        :returns: Tuple of two dicts. First dict has metrics for keys
+        and average training results for values. Second dict has
+        metrics for keys and average testing results for values      
+        :rtype: Tuple (of dicts)
+
+        """
+        
         avg_train_results = defaultdict(float)
         avg_test_results = defaultdict(float)
         #train_results is list
@@ -215,6 +224,9 @@ class CrossValidator(object):
 
 
     def plot_auroc_auprc(self,title_prefix='',fname_prefix='',include_fill=False):
+        """
+        Plot auroc and auprc curves
+        """
         self._load_metrics()
         rc('text',usetex=True)
         '''
